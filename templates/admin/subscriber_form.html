@@ -82,6 +82,18 @@
         </div>
     </form>
 
+    {% if subscriber %}
+    <div class="card" style="border-left:4px solid rgba(45,107,228,0.4);margin-top:var(--space-4)">
+        <h3>Service Rate Overrides</h3>
+        <p class="muted small">Set per-service token multipliers for this subscriber — e.g. charge 50% for song tracking, 150% for transcription.</p>
+        <div style="margin-top:var(--space-2)">
+            <a href="/admin/subscribers/{{ subscriber.SubscriberID }}/service-rates" class="btn btn-primary">
+                Manage Service Rates
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
     {% if subscriber and subscriber.SubscriberStatus not in ("archived", "cancelled") %}
     <div class="card" style="border-left:4px solid rgba(45,107,228,0.6);margin-top:var(--space-4)">
         <h3>Trial Account</h3>

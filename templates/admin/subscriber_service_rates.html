@@ -1,0 +1,109 @@
+{% extends "base_app.html" %}
+{% block title %}Service Rates — {{ subscriber.Name }} — NOCTIV Admin{% endblock %}
+{% block topbar_title %}Service Rates{% endblock %}
+{% block content %}
+<div class="page-eyebrow">Admin › <a href="/admin/subscribers/{{ subscriber.SubscriberID }}/edit" class="nav-link">{{ subscriber.Name }}</a></div>
+<header class="page-header">
+    <h1>Per-service rate overrides</h1>
+    <a href="/admin/subscribers/{{ subscriber.SubscriberID }}/edit" class="nav-link">← Back to subscriber</a>
+</header>
+
+{% if saved == 'ok' %}
+<div class="alert alert-success" style="margin-bottom:1rem">Rates saved successfully.</div>
+{% elif saved == 'error' %}
+<div class="alert alert-error" style="margin-bottom:1rem">One or more values were invalid — no changes saved.</div>
+{% endif %}
+
+<section class="card" style="margin-bottom:1.5rem">
+    <h2 class="card-title" style="margin-bottom:0.5rem">{{ subscriber.Name }}</h2>
+    <p class="muted small" style="margin-bottom:1.25rem">
+        Override the token multiplier applied to this subscriber's service costs.
+        Leave a field blank to keep the current value. Tick <strong>Reset</strong> to remove an override and revert to the system default.
+    </p>
+    <form method="post" action="/admin/subscribers/{{ subscriber.SubscriberID }}/service-rates">
+        <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Service</th>
+                    <th>System default</th>
+                    <th>Override rate</th>
+                    <th>Notes</th>
+                    <th>Effective</th>
+                    <th style="text-align:center">Reset</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for svc in services %}
+            <tr>
+                <td>
+                    <strong>{{ svc.label }}</strong><br>
+                    <span class="muted small" style="font-family:var(--mono)">{{ svc.key }}</span>
+                </td>
+                <td class="muted" style="font-family:var(--mono)">× {{ '%.4f'|format(svc.default) }}</td>
+                <td style="min-width:120px">
+                    <div style="display:flex;align-items:center;gap:0.4rem">
+                        <span class="muted">×</span>
+                        <input
+                            type="number"
+                            name="rate_{{ svc.key }}"
+                            step="0.0001"
+                            min="0"
+                            placeholder="{{ '%.4f'|format(svc.override.RatePerHour if svc.override else svc.default) }}"
+                            value="{{ '%.4f'|format(svc.override.RatePerHour) if svc.override else '' }}"
+                            class="form-input"
+                            style="width:110px"
+                        >
+                    </div>
+                </td>
+                <td style="min-width:180px">
+                    <input
+                        type="text"
+                        name="notes_{{ svc.key }}"
+                        placeholder="{{ svc.override.Notes or '' }}"
+                        value="{{ svc.override.Notes or '' }}"
+                        class="form-input"
+                        style="width:100%"
+                    >
+                </td>
+                <td style="font-family:var(--mono)">
+                    {% if svc.override %}
+                    <strong style="color:var(--white)">× {{ '%.4f'|format(svc.effective) }}</strong>
+                    <span class="muted small"> (override)</span>
+                    {% else %}
+                    <span class="muted">× {{ '%.4f'|format(svc.effective) }}</span>
+                    <span class="muted small"> (default)</span>
+                    {% endif %}
+                </td>
+                <td style="text-align:center">
+                    {% if svc.override %}
+                    <label style="display:flex;align-items:center;justify-content:center;gap:0.4rem;cursor:pointer">
+                        <input type="checkbox" name="clear_{{ svc.key }}" value="1">
+                        <span class="muted small">Reset</span>
+                    </label>
+                    {% else %}
+                    <span class="muted small">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <div class="form-actions" style="margin-top:1rem">
+            <button type="submit" class="btn btn-primary">Save overrides</button>
+            <a href="/admin/subscribers/{{ subscriber.SubscriberID }}/edit" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</section>
+
+<section class="card">
+    <h3 style="margin-bottom:0.5rem">How multipliers work</h3>
+    <p class="muted small">
+        <strong>Cost = base_tokens × multiplier</strong>, where base_tokens = stations × hours (minimum 24 h).<br>
+        A multiplier of <span style="font-family:var(--mono)">0.50</span> means this subscriber pays half the normal token rate for that service.
+        A multiplier of <span style="font-family:var(--mono)">1.00</span> means they pay the standard rate.
+        Values above <span style="font-family:var(--mono)">1.00</span> are valid (premium pricing).
+    </p>
+</section>
+{% endblock %}
