@@ -120,6 +120,8 @@ def transcription_request_form(
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ):
+    from app.services.token_service import get_effective_rate
+    transcription_rate = float(get_effective_rate(db, user.SubscriberID, "transcription")) if user.SubscriberID else 1.0
     return templates.TemplateResponse(
         request=request,
         name="app/transcriptions/request.html",
@@ -128,6 +130,7 @@ def transcription_request_form(
             "stations": get_tbfp_stations_for_picker(db),
             "error": None,
             "form": {},
+            "transcription_rate": transcription_rate,
             **right_panel_context(user, db, request),
         },
     )
@@ -143,8 +146,10 @@ async def transcription_request_submit(
     output_format: Annotated[str, Form()] = "chunks",
 ):
     from app.services.transcription_service import create_request
-    from app.services.token_service import get_balance, calculate_cost, calculate_cost_for_service, InsufficientTokensError
+    from app.services.token_service import get_balance, calculate_cost, calculate_cost_for_service, InsufficientTokensError, get_effective_rate
     from app.services.schedule_service import schedules_from_form, save_schedules, calculate_scheduled_hours
+
+    transcription_rate = float(get_effective_rate(db, user.SubscriberID, "transcription")) if user.SubscriberID else 1.0
 
     def rerender(error: str):
         return templates.TemplateResponse(
@@ -158,6 +163,7 @@ async def transcription_request_submit(
                     "date_from": date_from, "date_to": date_to,
                     "output_format": output_format,
                 },
+                "transcription_rate": transcription_rate,
                 **right_panel_context(user, db, request),
             },
             status_code=400,
@@ -201,7 +207,8 @@ async def transcription_request_submit(
         else:
             sched_objs = [type('S', (), {'DayOfWeek': s['day'], 'TimeFrom': s['from'], 'TimeTo': s['to']})() for s in schedule_dicts]
             scheduled_hours = calculate_scheduled_hours(sched_objs, df, dt, 1)
-        cost_per_station = Decimal(str(round(max(scheduled_hours, 1/60), 4)))
+        rate = get_effective_rate(db, user.SubscriberID, "transcription")
+        cost_per_station = (Decimal(str(round(scheduled_hours, 4))) * rate).quantize(Decimal("0.0001"))
     else:
         cost_per_station = calculate_cost_for_service(db, user.SubscriberID, "transcription", 1, df, dt)
 

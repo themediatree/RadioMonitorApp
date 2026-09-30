@@ -47,6 +47,52 @@ def _resolve_json_path(transcript) -> Optional[str]:
     )
 
 
+def _calculate_actual_hours(
+    date_from: date,
+    date_to: date,
+    time_from: Optional[str],
+    time_to: Optional[str],
+    schedule_dicts: Optional[list],
+) -> Decimal:
+    """
+    Returns the actual hours of audio content being requested, mirroring the
+    frontend cost-preview calculation in request.html::getScheduledHours().
+
+    - schedule_dicts provided → sum window durations × matching calendar days
+    - time_from/time_to only  → days × window hours
+    - neither                 → days × 24 (full coverage, unchanged behaviour)
+    """
+    days = (date_to - date_from).days + 1
+    single_day = date_from == date_to
+
+    if schedule_dicts:
+        total = Decimal("0")
+        for offset in range(days):
+            current = date_from + timedelta(days=offset)
+            dow = current.weekday()  # 0 = Monday
+            for w in schedule_dicts:
+                w_dow = w["day"]  # -1 = all days
+                if w_dow == -1 or single_day or w_dow == dow:
+                    t_from = w["from"]  # datetime.time object
+                    t_to   = w["to"]
+                    mins = (t_to.hour * 60 + t_to.minute) - (t_from.hour * 60 + t_from.minute)
+                    if mins > 0:
+                        total += Decimal(mins) / Decimal("60")
+        return total if total > 0 else Decimal(days * 24)
+
+    if time_from and time_to:
+        try:
+            tf_h, tf_m = [int(x) for x in str(time_from)[:5].split(":")]
+            tt_h, tt_m = [int(x) for x in str(time_to)[:5].split(":")]
+            mins_per_day = (tt_h * 60 + tt_m) - (tf_h * 60 + tf_m)
+            if mins_per_day > 0:
+                return Decimal(days * mins_per_day) / Decimal("60")
+        except Exception:
+            pass
+
+    return Decimal(days * 24)
+
+
 def create_request(
     db: Session,
     subscriber_id: int,
@@ -62,11 +108,14 @@ def create_request(
     cost: Optional[Decimal] = None,
 ) -> TranscriptionRequest:
     """Creates a TranscriptionRequest, debits tokens, attempts processing."""
-    from app.services.token_service import calculate_cost_for_service, debit
+    from app.services.token_service import get_effective_rate, debit
+    from decimal import ROUND_HALF_UP
     import json as _json
 
     if cost is None:
-        cost = calculate_cost_for_service(db, subscriber_id, "transcription", 1, date_from, date_to)
+        actual_hours = _calculate_actual_hours(date_from, date_to, time_from, time_to, schedule_dicts)
+        rate = get_effective_rate(db, subscriber_id, "transcription")
+        cost = (actual_hours * rate).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
 
     schedule_json = _json.dumps([
         {"day": s["day"], "from": s["from"].strftime("%H:%M"), "to": s["to"].strftime("%H:%M")}
@@ -94,11 +143,12 @@ def create_request(
     db.add(req)
     db.flush()
 
+    actual_hours = _calculate_actual_hours(date_from, date_to, time_from, time_to, schedule_dicts)
     debit(
         db,
         subscriber_id=subscriber_id,
         amount=cost,
-        description=f"Transcription request #{req.RequestID}",
+        description=f"Transcription request #{req.RequestID} — {float(actual_hours * 60):.0f} min",
         reference_id=req.RequestID,
         reference_type="transcription",
         created_by_user_id=user_id,
