@@ -28,6 +28,7 @@
                     <th>Service</th>
                     <th>System default</th>
                     <th>Override rate</th>
+                    <th>Reg. fee (tokens)</th>
                     <th>Notes</th>
                     <th>Effective</th>
                     <th style="text-align:center">Reset</th>
@@ -56,6 +57,26 @@
                         >
                     </div>
                 </td>
+                <td style="min-width:130px">
+                    <div style="display:flex;align-items:center;gap:0.4rem">
+                        <input
+                            type="number"
+                            name="reg_fee_{{ svc.key }}"
+                            step="0.0001"
+                            min="0"
+                            placeholder="{{ '%.4f'|format(svc.reg_fee) if svc.reg_fee is not none else 'none' }}"
+                            value="{{ '%.4f'|format(svc.reg_fee) if svc.reg_fee is not none else '' }}"
+                            class="form-input"
+                            style="width:110px"
+                        >
+                        {% if svc.reg_fee is not none %}
+                        <label style="display:flex;align-items:center;gap:0.25rem;cursor:pointer;white-space:nowrap" title="Clear registration fee">
+                            <input type="checkbox" name="clear_reg_fee_{{ svc.key }}" value="1">
+                            <span class="muted small">Clear</span>
+                        </label>
+                        {% endif %}
+                    </div>
+                </td>
                 <td style="min-width:180px">
                     <input
                         type="text"
@@ -79,7 +100,7 @@
                     {% if svc.override %}
                     <label style="display:flex;align-items:center;justify-content:center;gap:0.4rem;cursor:pointer">
                         <input type="checkbox" name="clear_{{ svc.key }}" value="1">
-                        <span class="muted small">Reset</span>
+                        <span class="muted small">Reset all</span>
                     </label>
                     {% else %}
                     <span class="muted small">—</span>
@@ -103,7 +124,9 @@
         <strong>Cost = base_tokens × multiplier</strong>, where base_tokens = stations × hours (minimum 24 h).<br>
         A multiplier of <span style="font-family:var(--mono)">0.50</span> means this subscriber pays half the normal token rate for that service.
         A multiplier of <span style="font-family:var(--mono)">1.00</span> means they pay the standard rate.
-        Values above <span style="font-family:var(--mono)">1.00</span> are valid (premium pricing).
+        Values above <span style="font-family:var(--mono)">1.00</span> are valid (premium pricing).<br><br>
+        <strong>Registration fee</strong> is a flat token amount charged once per commercial spot registered, in addition to the per-hour monitoring cost.
+        Leave blank for no flat fee (default). Applies to both the app dashboard and API registrations.
     </p>
 </section>
 {% endblock %}

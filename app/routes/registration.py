@@ -464,6 +464,7 @@ async def register_submit(
         # Debit after commit so the commercial row exists for the reference.
         try:
             from decimal import Decimal
+            from app.services.token_service import get_effective_registration_fee
             debit(
                 db, target_subscriber_id, token_cost,
                 description=(
@@ -475,6 +476,16 @@ async def register_submit(
                 reference_type="commercial",
                 created_by_user_id=user.UserID,
             )
+            # Flat per-registration fee (if configured for this subscriber)
+            reg_fee = get_effective_registration_fee(db, target_subscriber_id, "commercial")
+            if reg_fee and reg_fee > 0:
+                debit(
+                    db, target_subscriber_id, reg_fee,
+                    description=f"Commercial registration fee: {clean_tape_id}",
+                    reference_id=commercial.CommercialID,
+                    reference_type="commercial",
+                    created_by_user_id=user.UserID,
+                )
             db.commit()
         except Exception as e:
             import logging

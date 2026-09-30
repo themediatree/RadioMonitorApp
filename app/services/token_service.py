@@ -359,6 +359,33 @@ def get_effective_rate(
     return DEFAULT_SERVICE_RATES.get(service_type, Decimal("1.00"))
 
 
+def get_effective_registration_fee(
+    db: Session,
+    subscriber_id: int,
+    service_type: str,
+) -> Optional[Decimal]:
+    """Return the flat per-registration fee (tokens) for a subscriber + service, or None.
+
+    None means no flat fee applies. A value of Decimal("0") is also valid (explicitly waived).
+    Currently used for commercial spots; the field is available for any service type.
+    """
+    try:
+        from app.models.billing import SubscriberServiceRate
+        row = (
+            db.query(SubscriberServiceRate)
+            .filter(
+                SubscriberServiceRate.SubscriberID == subscriber_id,
+                SubscriberServiceRate.ServiceType == service_type,
+            )
+            .one_or_none()
+        )
+        if row is not None and row.RegistrationFee is not None:
+            return row.RegistrationFee
+    except Exception:
+        pass
+    return None
+
+
 def calculate_cost_for_service(
     db: Session,
     subscriber_id: int,

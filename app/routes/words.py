@@ -246,12 +246,12 @@ async def word_subscribe_submit(
     # Balance check before creating anything
     from app.services.token_service import calculate_cost_for_service, debit, get_balance, InsufficientTokensError
     from decimal import Decimal
-    token_cost = calculate_cost_for_service(db, target_sub_id, "word", len(station_ids), sd, ed) * len(keywords)
+    token_cost = calculate_cost_for_service(db, target_sub_id, "word", len(station_ids), sd, ed)
     balance = get_balance(db, target_sub_id)
     if balance < token_cost:
         return rerender(
-            f"Insufficient credits. {len(keywords)} keyword(s) × {len(station_ids)} "
-            f"station{'s' if len(station_ids)!=1 else ''} requires {token_cost:.2f} credits. "
+            f"Insufficient credits. {len(station_ids)} station{'s' if len(station_ids)!=1 else ''} "
+            f"requires {token_cost:.2f} credits. "
             f"Your balance is {balance:.2f} credits."
         )
 

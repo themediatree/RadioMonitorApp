@@ -9,7 +9,7 @@ Admin billing routes.
 """
 
 from decimal import Decimal, InvalidOperation
-from typing import Annotated
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -165,6 +165,11 @@ def subscriber_service_rates(
             "default": DEFAULT_SERVICE_RATES.get(svc, Decimal("1.00")),
             "override": overrides.get(svc),
             "effective": get_effective_rate(db, subscriber_id, svc),
+            "reg_fee": (
+                overrides[svc].RegistrationFee
+                if svc in overrides and overrides[svc].RegistrationFee is not None
+                else None
+            ),
         }
         for svc in DEFAULT_SERVICE_RATES
     ]
@@ -215,28 +220,53 @@ async def save_subscriber_service_rates(
                 db.delete(existing)
             continue
 
-        if not raw_rate:
-            continue  # field left blank → no change
+        # Parse registration fee (optional, commercial only but stored generically)
+        raw_reg_fee = (form.get(f"reg_fee_{svc}") or "").strip()
+        reg_fee: Optional[Decimal] = None
+        clear_reg_fee = form.get(f"clear_reg_fee_{svc}") == "1"
+        if clear_reg_fee:
+            reg_fee = None  # will be set to NULL below
+        elif raw_reg_fee:
+            try:
+                reg_fee = Decimal(raw_reg_fee)
+                if reg_fee < 0:
+                    raise ValueError
+            except (InvalidOperation, ValueError):
+                errors.append(f"Invalid registration fee for {SERVICE_LABELS.get(svc, svc)}: '{raw_reg_fee}'")
+                continue
 
-        try:
-            rate = Decimal(raw_rate)
-            if rate < 0:
-                raise ValueError
-        except (InvalidOperation, ValueError):
-            errors.append(f"Invalid rate for {SERVICE_LABELS.get(svc, svc)}: '{raw_rate}'")
-            continue
+        if not raw_rate and not raw_reg_fee and not clear_reg_fee:
+            continue  # nothing to change
+
+        # Resolve or validate rate
+        if raw_rate:
+            try:
+                rate = Decimal(raw_rate)
+                if rate < 0:
+                    raise ValueError
+            except (InvalidOperation, ValueError):
+                errors.append(f"Invalid rate for {SERVICE_LABELS.get(svc, svc)}: '{raw_rate}'")
+                continue
+        else:
+            rate = None  # no rate change
 
         notes = (form.get(f"notes_{svc}") or "").strip() or None
 
         if existing:
-            existing.RatePerHour = rate
+            if rate is not None:
+                existing.RatePerHour = rate
+            if clear_reg_fee:
+                existing.RegistrationFee = None
+            elif reg_fee is not None:
+                existing.RegistrationFee = reg_fee
             existing.SetByUserID = user.UserID
             existing.Notes = notes
-        else:
+        elif rate is not None:
             db.add(SubscriberServiceRate(
                 SubscriberID=subscriber_id,
                 ServiceType=svc,
                 RatePerHour=rate,
+                RegistrationFee=reg_fee,
                 SetByUserID=user.UserID,
                 Notes=notes,
             ))

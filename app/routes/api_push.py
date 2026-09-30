@@ -288,6 +288,13 @@ async def api_register_commercial(
               description=f"Commercial registration: {clean_tape_id}",
               reference_id=commercial.CommercialID, reference_type="commercial",
               source="api")
+        from app.services.token_service import get_effective_registration_fee
+        reg_fee = get_effective_registration_fee(db, subscriber.SubscriberID, "commercial")
+        if reg_fee and reg_fee > 0:
+            debit(db, subscriber_id=subscriber.SubscriberID, amount=reg_fee,
+                  description=f"Commercial registration fee: {clean_tape_id}",
+                  reference_id=commercial.CommercialID, reference_type="commercial",
+                  source="api")
         db.commit()
 
         return JSONResponse(status_code=201, content={

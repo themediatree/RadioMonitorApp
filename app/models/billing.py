@@ -77,6 +77,7 @@ class SubscriberServiceRate(Base):
     SubscriberID: Mapped[int] = mapped_column(ForeignKey("Subscriber.SubscriberID"), nullable=False)
     ServiceType: Mapped[str] = mapped_column(String(20), nullable=False)   # commercial/song/word/transcription/spectrum
     RatePerHour: Mapped[Decimal] = mapped_column(Numeric(10, 4), nullable=False)
+    RegistrationFee: Mapped[Optional[Decimal]] = mapped_column(Numeric(18, 4), nullable=True)
     SetByUserID: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     Notes: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     CreatedAt: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=utc_now, server_default=func.sysdatetime())
