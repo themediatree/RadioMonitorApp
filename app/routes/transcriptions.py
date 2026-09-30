@@ -143,7 +143,7 @@ async def transcription_request_submit(
     output_format: Annotated[str, Form()] = "chunks",
 ):
     from app.services.transcription_service import create_request
-    from app.services.token_service import get_balance, calculate_cost, InsufficientTokensError
+    from app.services.token_service import get_balance, calculate_cost, calculate_cost_for_service, InsufficientTokensError
     from app.services.schedule_service import schedules_from_form, save_schedules, calculate_scheduled_hours
 
     def rerender(error: str):
@@ -203,7 +203,7 @@ async def transcription_request_submit(
             scheduled_hours = calculate_scheduled_hours(sched_objs, df, dt, 1)
         cost_per_station = Decimal(str(round(max(scheduled_hours, 1/60), 4)))
     else:
-        cost_per_station = calculate_cost(1, df, dt)
+        cost_per_station = calculate_cost_for_service(db, user.SubscriberID, "transcription", 1, df, dt)
 
     total_cost = cost_per_station * len(station_ids)
     balance = get_balance(db, user.SubscriberID) if user.SubscriberID else 0

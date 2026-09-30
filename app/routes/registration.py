@@ -396,7 +396,7 @@ async def register_submit(
 
         # --- 6b. Token balance check + debit ---
         from app.services.token_service import (
-            calculate_cost, debit, get_balance, InsufficientTokensError
+            calculate_cost, calculate_cost_for_service, debit, get_balance, InsufficientTokensError
         )
         from decimal import Decimal
         if schedule_dicts and ed:
@@ -415,7 +415,7 @@ async def register_submit(
                 scheduled_hours = calculate_scheduled_hours(sched_objs, sd or date.today(), ed, len(sids))
             token_cost = Decimal(str(round(max(scheduled_hours, 1/60), 4)))
         else:
-            token_cost = calculate_cost(len(sids), sd or date.today(), ed)
+            token_cost = calculate_cost_for_service(db, target_subscriber_id, "commercial", len(sids), sd or date.today(), ed)
         balance = get_balance(db, target_subscriber_id)
         if balance < token_cost:
             db.rollback()

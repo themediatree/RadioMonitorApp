@@ -274,9 +274,9 @@ async def song_subscribe_submit(
         return rerender(str(e))
 
     # Balance check + debit
-    from app.services.token_service import calculate_cost, debit, get_balance, InsufficientTokensError
+    from app.services.token_service import calculate_cost_for_service, debit, get_balance, InsufficientTokensError
     from decimal import Decimal
-    token_cost = calculate_cost(len(station_ids), sd, ed)
+    token_cost = calculate_cost_for_service(db, target_sub_id, "song", len(station_ids), sd, ed)
     balance = get_balance(db, target_sub_id)
     if balance < token_cost:
         db.rollback()
@@ -356,8 +356,7 @@ def song_subscribe_extend(
     from app.services.schedule_service import (
         get_subscription_schedules, is_detection_in_schedule, extend_schedule_to_cover
     )
-    from app.services.token_service import get_balance, debit
-    from app.services.billing_service import get_rate
+    from app.services.token_service import get_balance, debit, get_effective_rate
     from decimal import Decimal
 
     # Verify ownership
@@ -395,8 +394,6 @@ def song_subscribe_extend(
     # Get billing rate
     from app.models.subscriber import Subscriber
     subscriber = db.get(Subscriber, sub.SubscriberID)
-    plan_code = subscriber.SubscriptionPlan if subscriber else "standard"
-    rate = get_rate(db, plan_code)
 
     result = extend_schedule_to_cover(
         db=db,
@@ -404,16 +401,18 @@ def song_subscribe_extend(
         out_of_schedule_detections=oos,
         station_ids=station_ids,
         end_date=sub.EndDate,
-        rate_per_hour=rate,
+        rate_per_hour=Decimal("1.00"),
     )
 
     if result["cost"] > 0:
+        service_rate = get_effective_rate(db, sub.SubscriberID, "song")
+        extension_cost = (result["cost"] * service_rate).quantize(Decimal("0.0001"))
         balance = get_balance(db, sub.SubscriberID)
-        if balance >= result["cost"]:
+        if balance >= extension_cost:
             debit(
                 db,
                 subscriber_id=sub.SubscriberID,
-                amount=result["cost"],
+                amount=extension_cost,
                 description=f"Schedule extension: subscription #{subscription_id} — {', '.join(result['days_extended'])}",
                 reference_id=subscription_id,
                 reference_type="song_extend",

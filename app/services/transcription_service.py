@@ -62,11 +62,11 @@ def create_request(
     cost: Optional[Decimal] = None,
 ) -> TranscriptionRequest:
     """Creates a TranscriptionRequest, debits tokens, attempts processing."""
-    from app.services.token_service import calculate_cost, debit
+    from app.services.token_service import calculate_cost_for_service, debit
     import json as _json
 
     if cost is None:
-        cost = calculate_cost(1, date_from, date_to)
+        cost = calculate_cost_for_service(db, subscriber_id, "transcription", 1, date_from, date_to)
 
     schedule_json = _json.dumps([
         {"day": s["day"], "from": s["from"].strftime("%H:%M"), "to": s["to"].strftime("%H:%M")}

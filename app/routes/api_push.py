@@ -167,7 +167,7 @@ async def api_register_commercial(
     from app.models.station import Station
     from app.models.campaign import Commercial, CampaignCommercial
     from app.services import registration_service
-    from app.services.token_service import get_balance, calculate_cost, debit
+    from app.services.token_service import get_balance, calculate_cost, calculate_cost_for_service, debit
     from app.services.schedule_service import save_campaign_station_schedules
     import tempfile, os, shutil
 
@@ -191,7 +191,7 @@ async def api_register_commercial(
         except Exception as e:
             raise HTTPException(status_code=422, detail=str(e))
 
-        cost = calculate_cost(len(station_ids), sd, ed)
+        cost = calculate_cost_for_service(db, subscriber.SubscriberID, "commercial", len(station_ids), sd, ed)
         if get_balance(db, subscriber.SubscriberID) < cost:
             raise HTTPException(status_code=402, detail=f"Insufficient credits. Need {cost}.")
 
@@ -336,7 +336,7 @@ async def api_subscribe_song(
     from datetime import date as date_type
     from app.models.station import Station
     from app.services.subscription_service import create_song_subscription
-    from app.services.token_service import get_balance, calculate_cost, debit
+    from app.services.token_service import get_balance, calculate_cost, calculate_cost_for_service, debit
     from app.services.schedule_service import save_schedules
 
     if not title and not track_id:
@@ -354,7 +354,7 @@ async def api_subscribe_song(
         except ValueError:
             raise HTTPException(status_code=422, detail="Invalid date format. Use YYYY-MM-DD.")
 
-        cost = calculate_cost(len(station_ids), sd, ed)
+        cost = calculate_cost_for_service(db, subscriber.SubscriberID, "song", len(station_ids), sd, ed)
         if get_balance(db, subscriber.SubscriberID) < cost:
             raise HTTPException(status_code=402, detail=f"Insufficient credits. Need {cost}.")
 
@@ -421,7 +421,7 @@ async def api_subscribe_keyword(
     from datetime import date as date_type
     from app.models.station import Station
     from app.services.subscription_service import create_keyword_subscription
-    from app.services.token_service import get_balance, calculate_cost, debit
+    from app.services.token_service import get_balance, calculate_cost, calculate_cost_for_service, debit
     from app.services.schedule_service import save_schedules
 
     schedule_dicts = _parse_schedule_windows(schedule_windows)
@@ -436,7 +436,7 @@ async def api_subscribe_keyword(
         except ValueError:
             raise HTTPException(status_code=422, detail="Invalid date format. Use YYYY-MM-DD.")
 
-        cost = calculate_cost(len(station_ids), sd, ed)
+        cost = calculate_cost_for_service(db, subscriber.SubscriberID, "word", len(station_ids), sd, ed)
         if get_balance(db, subscriber.SubscriberID) < cost:
             raise HTTPException(status_code=402, detail=f"Insufficient credits. Need {cost}.")
 
@@ -495,7 +495,7 @@ async def api_request_transcription(
     from datetime import date as date_type
     from app.models.station import Station
     from app.services.transcription_service import create_request
-    from app.services.token_service import get_balance, calculate_cost, InsufficientTokensError
+    from app.services.token_service import get_balance, calculate_cost_for_service, InsufficientTokensError
 
     db = SessionLocal()
     try:
@@ -514,7 +514,7 @@ async def api_request_transcription(
         if dt < df:
             raise HTTPException(status_code=422, detail="date_to must be on or after date_from.")
 
-        cost = calculate_cost(1, df, dt)
+        cost = calculate_cost_for_service(db, subscriber.SubscriberID, "transcription", 1, df, dt)
         if get_balance(db, subscriber.SubscriberID) < cost:
             raise HTTPException(status_code=402, detail=f"Insufficient credits. Need {cost}.")
 

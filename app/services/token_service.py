@@ -318,6 +318,67 @@ def credit_monthly_allocations(
 
 
 # ---------------------------------------------------------------------------
+# Per-service rate multipliers
+# ---------------------------------------------------------------------------
+
+DEFAULT_SERVICE_RATES: dict[str, Decimal] = {
+    "commercial":    Decimal("1.00"),   # baseline — 1 token per station-hour
+    "song":          Decimal("0.50"),   # 50 % of baseline
+    "word":          Decimal("0.75"),   # 75 %
+    "transcription": Decimal("1.50"),   # 150 % — most compute-intensive
+    "spectrum":      Decimal("0.25"),   # lightest service
+}
+
+
+def get_effective_rate(
+    db: Session,
+    subscriber_id: int,
+    service_type: str,
+) -> Decimal:
+    """Return the rate multiplier (tokens per station-hour) for a subscriber + service.
+
+    Checks SubscriberServiceRate for a per-subscriber override; falls back to
+    DEFAULT_SERVICE_RATES, then 1.00 for unknown service types.
+    Wrapped in a broad except so a missing table during the migration window
+    never blocks a registration.
+    """
+    try:
+        from app.models.billing import SubscriberServiceRate
+        row = (
+            db.query(SubscriberServiceRate)
+            .filter(
+                SubscriberServiceRate.SubscriberID == subscriber_id,
+                SubscriberServiceRate.ServiceType == service_type,
+            )
+            .one_or_none()
+        )
+        if row is not None:
+            return row.RatePerHour
+    except Exception:
+        pass
+    return DEFAULT_SERVICE_RATES.get(service_type, Decimal("1.00"))
+
+
+def calculate_cost_for_service(
+    db: Session,
+    subscriber_id: int,
+    service_type: str,
+    station_count: int,
+    start_date: date,
+    end_date: Optional[date],
+) -> Decimal:
+    """calculate_cost() × the effective per-service rate for this subscriber.
+
+    Use this at every registration/subscription call site that has DB access.
+    billing_service.py previews and bulk-upload validation (no subscriber
+    context) should continue to call calculate_cost() directly.
+    """
+    base = calculate_cost(station_count, start_date, end_date)
+    rate = get_effective_rate(db, subscriber_id, service_type)
+    return (base * rate).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+
+
+# ---------------------------------------------------------------------------
 # Queries
 # ---------------------------------------------------------------------------
 

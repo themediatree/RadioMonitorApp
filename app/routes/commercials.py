@@ -138,7 +138,7 @@ def withdraw_commercial(
     subscriber_id = commercial.SubscriberID
 
     # Calculate partial refund for remaining station-hours before withdrawing.
-    from app.services.token_service import calculate_cost, refund as token_refund, get_balance
+    from app.services.token_service import calculate_cost_for_service, refund as token_refund, get_balance
     from datetime import date as date_type
     refund_amount = None
     try:
@@ -159,7 +159,7 @@ def withdraw_commercial(
         )
         today = date_type.today()
         if camp and camp.EndDate and camp.EndDate > today and station_count > 0:
-            refund_amount = calculate_cost(station_count, today, camp.EndDate)
+            refund_amount = calculate_cost_for_service(db, subscriber_id, "commercial", station_count, today, camp.EndDate)
     except Exception:
         refund_amount = None
 
