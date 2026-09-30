@@ -1,0 +1,626 @@
+{% extends "base_app.html" %}
+{% block title %}Detection Report — NOCTIV{% endblock %}
+{% block topbar_title %}Detection Report{% endblock %}
+
+{% block content %}
+<style>
+/* ── REPORT-SPECIFIC STYLES ── */
+.report-eyebrow {
+  font-family: var(--mono); font-size: 0.62rem;
+  color: var(--glow); letter-spacing: 0.18em;
+  text-transform: uppercase; margin-bottom: 0.4rem;
+}
+.report-hero {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 1.5rem;
+  margin-bottom: 2rem; flex-wrap: wrap;
+}
+.report-hero h1 {
+  font-family: var(--display); font-size: 1.75rem;
+  font-weight: 800; color: var(--white);
+  letter-spacing: -0.02em; line-height: 1.1;
+}
+.report-hero-meta {
+  font-size: 0.78rem; color: var(--muted); margin-top: 0.4rem;
+}
+.report-hero-actions { display: flex; gap: 0.5rem; flex-shrink: 0; align-items: flex-start; }
+
+/* Filter card */
+.filter-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px; padding: 1.25rem;
+  margin-bottom: 1.75rem;
+}
+.filter-card-title {
+  font-family: var(--mono); font-size: 0.65rem;
+  color: var(--muted); letter-spacing: 0.12em;
+  text-transform: uppercase; margin-bottom: 1rem;
+}
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+}
+
+/* Summary stat strip */
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+.stat-strip-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  position: relative; overflow: hidden;
+}
+.stat-strip-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--cobalt), var(--glow));
+}
+.stat-strip-card.accent-green::before { background: linear-gradient(90deg, #00c853, #00e676); }
+.stat-strip-card.accent-orange::before { background: linear-gradient(90deg, #ff6d00, #ff9100); }
+.stat-strip-card.accent-purple::before { background: linear-gradient(90deg, #7c4dff, #b388ff); }
+.stat-strip-label {
+  font-family: var(--mono); font-size: 0.62rem;
+  color: var(--muted); letter-spacing: 0.1em;
+  text-transform: uppercase; margin-bottom: 0.5rem;
+}
+.stat-strip-value {
+  font-family: var(--mono); font-size: 2rem;
+  font-weight: 500; color: var(--white); line-height: 1;
+}
+.stat-strip-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; }
+
+/* Results panel */
+.results-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.results-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.results-header-title {
+  font-family: var(--display); font-size: 0.9rem;
+  font-weight: 600; color: var(--white);
+}
+.results-count {
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--muted);
+}
+
+/* Category badge colours */
+.cat-commercial { background: rgba(45,107,228,0.15); color: #4a8eff; }
+.cat-jingle     { background: rgba(124,77,255,0.15); color: #b388ff; }
+.cat-promo      { background: rgba(255,109,0,0.15);  color: #ff9100; }
+.cat-other      { background: rgba(192,207,224,0.1); color: var(--chrome); }
+
+/* Match score bar */
+.match-bar-wrap { display: flex; align-items: center; gap: 0.5rem; }
+.match-bar {
+  height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08);
+  width: 48px; overflow: hidden; flex-shrink: 0;
+}
+.match-bar-fill { height: 100%; border-radius: 2px; background: var(--glow); }
+.match-pct { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); }
+
+/* Breakdown section */
+.breakdown-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1rem; margin-top: 1.75rem;
+}
+.breakdown-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+}
+.breakdown-header {
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono); font-size: 0.65rem;
+  color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase;
+}
+.breakdown-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.55rem 1.25rem;
+  border-bottom: 1px solid rgba(192,207,224,0.04);
+}
+.breakdown-row:last-child { border-bottom: none; }
+.breakdown-name { font-size: 0.82rem; color: var(--pale); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.breakdown-bar-wrap { display: flex; align-items: center; gap: 0.6rem; width: 120px; flex-shrink: 0; }
+.breakdown-bar { height: 6px; border-radius: 3px; background: rgba(74,142,255,0.15); flex: 1; overflow: hidden; }
+.breakdown-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--cobalt), var(--glow)); }
+.breakdown-count { font-family: var(--mono); font-size: 0.72rem; color: var(--chrome); width: 28px; text-align: right; flex-shrink: 0; }
+
+/* Empty state */
+.empty-state {
+  text-align: center; padding: 4rem 2rem; color: var(--muted);
+}
+.empty-state-icon { font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.4; }
+.empty-state-title { font-family: var(--display); font-size: 1rem; color: var(--chrome); margin-bottom: 0.4rem; }
+
+.station-group-header td {
+  background: #2a2f3a;
+  padding: 8px 12px;
+  border-top: 2px solid rgba(74,142,255,0.2);
+}
+.station-group-inner {
+  display: flex; align-items: center; gap: 10px;
+}
+.station-group-inner img {
+  height: 26px; width: auto; border-radius: 3px; object-fit: contain;
+}
+.station-group-name {
+  font-weight: 700; font-size: 0.85rem; color: #c8cdd8; letter-spacing: 0.03em;
+}
+</style>
+
+<!-- PAGE HEADER -->
+<div class="report-eyebrow">Reports / Commercial Monitoring</div>
+<div class="report-hero">
+  <div>
+    <h1>Detection Report</h1>
+    <div class="report-hero-meta">
+      Commercial airplay detections scoped to your account
+      {% if result %}
+      · Generated {{ result.generated_at.strftime("%d %b %Y %H:%M") }} UTC
+      {% endif %}
+    </div>
+  </div>
+  <div class="report-hero-actions">
+    {% if result and result.rows %}
+    <a href="/reports/detection/pdf?{{ request.query_string.decode() }}"
+       class="btn btn-primary" target="_blank">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Export PDF
+    </a>
+    {% endif %}
+    <a href="/reports" class="btn btn-ghost">← All Reports</a>
+  </div>
+</div>
+
+<!-- FILTER CARD -->
+<div class="filter-card">
+  <div class="filter-card-title">Filter</div>
+  <form method="get" action="/reports/detection">
+    <div class="filter-grid">
+      <div class="form-field">
+        <label class="form-label">From</label>
+        <input type="date" name="date_from" class="form-input"
+               value="{{ filters.date_from or '' }}">
+      </div>
+      <div class="form-field">
+        <label class="form-label">To</label>
+        <input type="date" name="date_to" class="form-input"
+               value="{{ filters.date_to or '' }}">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Station</label>
+        <select name="station_id" class="form-select">
+          <option value="">All stations</option>
+          {% for st in stations %}
+          <option value="{{ st.StationID }}"
+            {% if filters.station_id == st.StationID|string %}selected{% endif %}>
+            {{ st.StationName }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-field" style="position:relative">
+        <label class="form-label">Commercial</label>
+        <input type="text" id="commercial-search" class="form-input"
+               placeholder="Search…" autocomplete="off"
+               value="{{ filters.commercial_name or '' }}"
+               oninput="filterCommercials(this.value)">
+        <input type="hidden" name="commercial_name" id="commercial-name-val"
+               value="{{ filters.commercial_name or '' }}">
+        <div id="commercial-dropdown" class="station-picker-dropdown" style="max-height:200px">
+          <div id="commercial-options">
+            {% for tape_id, _ in commercials %}
+            <div class="station-picker-option" data-value="{{ tape_id }}"
+                 onclick="selectCommercial('{{ tape_id }}')">
+              {{ tape_id }}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="form-field" style="position:relative">
+        <label class="form-label">Campaign</label>
+        <input type="text" id="campaign-search" class="form-input"
+               placeholder="Search…" autocomplete="off"
+               value="{{ filters.campaign_id and (campaigns | selectattr('0', 'equalto', filters.campaign_id|int) | map(attribute='1') | first) or '' }}"
+               oninput="filterCampaigns(this.value)">
+        <input type="hidden" name="campaign_id" id="campaign-id-val"
+               value="{{ filters.campaign_id or '' }}">
+        <div id="campaign-dropdown" class="station-picker-dropdown" style="max-height:200px">
+          <div id="campaign-options">
+            {% for cid, cname in campaigns %}
+            <div class="station-picker-option" data-value="{{ cid }}" data-label="{{ cname }}"
+                 onclick="selectCampaign('{{ cid }}', '{{ cname }}')">
+              {{ cname }}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="form-field" style="align-self:end">
+        <button type="submit" class="btn btn-primary" style="width:100%">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          Run Report
+        </button>
+      </div>
+      <div class="form-field" style="align-self:end">
+        <a href="/reports/detection?all=1" class="btn btn-ghost" style="width:100%;text-align:center">
+          All Detections
+        </a>
+      </div>
+    </div>
+  </form>
+</div>
+
+{% if out_of_schedule_count is defined and out_of_schedule_count > 0 %}
+<div id="rpt-oos-banner"
+     style="display:flex;align-items:center;justify-content:space-between;
+            padding:0.65rem 1rem;background:rgba(251,146,60,0.08);
+            border:1px solid rgba(251,146,60,0.25);border-radius:8px;margin-bottom:0.75rem">
+  <span style="font-size:0.82rem;color:#fb923c">
+    <strong id="rpt-oos-count">{{ out_of_schedule_count }}</strong>
+    detection{{ 's' if out_of_schedule_count != 1 else '' }} in this report aired outside registered spot times
+  </span>
+  <button type="button" onclick="toggleRptOosPanel()"
+          class="btn btn-ghost btn-sm"
+          style="color:#fb923c;border-color:rgba(251,146,60,0.3);font-size:0.75rem">VIEW</button>
+</div>
+
+<div id="rpt-oos-panel"
+     style="display:none;border:1px solid rgba(251,146,60,0.3);border-radius:8px;
+            padding:1rem;margin-bottom:1rem;background:rgba(251,146,60,0.04)">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+    <strong style="font-size:0.9rem;color:#fb923c">Out of spot — report scope</strong>
+    <button type="button" onclick="toggleRptOosPanel()"
+            style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem">✕</button>
+  </div>
+  <p class="muted small" style="margin-bottom:0.75rem">
+    These detections aired outside registered spot times. Accept them to include in this report and future reports. Billing applies.
+  </p>
+  <div id="rpt-oos-debit-note" style="display:none;font-size:0.8rem;color:#22c55e;margin-bottom:0.5rem"></div>
+  <div class="table-scroll">
+    <table class="data-table" style="font-size:0.82rem">
+      <thead>
+        <tr>
+          <th style="width:32px"><input type="checkbox" onchange="rptToggleAllOos(this)" title="Select all"></th>
+          <th>Aired</th><th>Start</th><th>End</th><th>Station</th><th>Commercial</th><th>Campaign</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in oos_rows %}
+        {% set d = item.detection %}
+        {% set a = item.aired %}
+        <tr class="rpt-oos-row" data-id="{{ d.DetectionID }}">
+          <td><input type="checkbox" class="rpt-oos-check" value="{{ d.DetectionID }}"></td>
+          <td class="mono muted">{{ a.aired_date or "—" }}</td>
+          <td class="mono">{{ a.start_clock or "—" }}</td>
+          <td class="mono muted">{{ a.end_clock or "—" }}</td>
+          <td>{{ station_map.get(d.StationID, d.StationID) }}</td>
+          <td>{{ d.commercial.DisplayTapeID if d.commercial else "—" }}</td>
+          <td class="muted">{{ d.campaign.Name if d.campaign else "—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div style="display:flex;gap:0.75rem;margin-top:0.75rem;flex-wrap:wrap">
+    <button id="rpt-accept-sel-btn" type="button" onclick="rptAcceptSelected()"
+            class="btn btn-ghost btn-sm" style="color:#fb923c;border-color:rgba(251,146,60,0.4)">
+      UPDATE / INCLUDE selected
+    </button>
+    <button id="rpt-accept-all-btn" type="button" onclick="rptAcceptAll()"
+            class="btn btn-primary btn-sm" style="background:#fb923c;border-color:#fb923c">
+      UPDATE / INCLUDE ALL
+    </button>
+  </div>
+</div>
+{% endif %}
+
+{% if result %}
+
+<!-- SUMMARY STRIP -->
+<div class="stat-strip">
+  <div class="stat-strip-card">
+    <div class="stat-strip-label">Total Plays</div>
+    <div class="stat-strip-value">{{ result.total_plays }}</div>
+    <div class="stat-strip-sub">detections in period</div>
+  </div>
+  <div class="stat-strip-card accent-green">
+    <div class="stat-strip-label">Commercials</div>
+    <div class="stat-strip-value">{{ result.unique_commercials }}</div>
+    <div class="stat-strip-sub">unique spots detected</div>
+  </div>
+  <div class="stat-strip-card accent-orange">
+    <div class="stat-strip-label">Stations</div>
+    <div class="stat-strip-value">{{ result.unique_stations }}</div>
+    <div class="stat-strip-sub">stations with airplay</div>
+  </div>
+  <div class="stat-strip-card accent-purple">
+    <div class="stat-strip-label">Period</div>
+    <div class="stat-strip-value" style="font-size:1.1rem;padding-top:0.35rem">
+      {{ result.date_from.strftime("%d %b") if result.date_from else "—" }}
+      –
+      {{ result.date_to.strftime("%d %b %Y") if result.date_to else "—" }}
+    </div>
+    <div class="stat-strip-sub">date range</div>
+  </div>
+</div>
+
+{% if result.rows %}
+
+<!-- DETECTION TABLE -->
+<div class="results-panel">
+  <div class="results-header">
+    <div class="results-header-title">Detection Log</div>
+    <div class="results-count">{{ result.total }} result{{ 's' if result.total != 1 else '' }}</div>
+  </div>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Commercial</th>
+          <th>Station</th>
+          <th>Start</th>
+          <th>End</th>
+          <th>Type</th>
+          <th>Campaign</th>
+          <th>Clip</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for station_name, station_rows in result.rows | groupby('station_name') %}
+        <tr class="station-group-header">
+          <td colspan="8">
+            <div class="station-group-inner">
+              {% set logo_url = result.station_logo_map.get(station_name) %}
+              {% if logo_url %}<img src="{{ logo_url }}" onerror="this.style.display='none'" alt="{{ station_name }}">{% endif %}
+              <span class="station-group-name">{{ station_name }}</span>
+              <span style="font-size:0.72rem;color:#94a3b8;margin-left:6px">
+                {% set det_count = namespace(n=0) %}{% for _r in station_rows %}{% if _r.detection_id != 0 %}{% set det_count.n = det_count.n + 1 %}{% endif %}{% endfor %}
+                {% if det_count.n > 0 %}{{ det_count.n }} detection{{ 's' if det_count.n != 1 }}{% else %}No detections in period{% endif %}
+              </span>
+            </div>
+          </td>
+        </tr>
+        {% for row in station_rows %}
+        <tr {% if row.detection_id == 0 %}style="opacity:0.5;font-style:italic"{% endif %}>
+          <td class="nowrap" style="font-family:var(--mono);font-size:0.75rem;color:var(--muted)">
+            {% if row.detection_id == 0 %}No detections{% else %}{{ row.chunk_date }}{% endif %}
+            {% if oos_detection_ids is defined and row.detection_id in oos_detection_ids %}
+            <div style="margin-top:3px">
+              <span style="font-size:0.62rem;font-weight:600;padding:1px 5px;border-radius:3px;background:rgba(251,146,60,0.15);color:#fb923c;border:1px solid rgba(251,146,60,0.3)">Out of spot</span>
+            </div>
+            {% endif %}
+          </td>
+          <td style="font-weight:500;color:var(--white)">{{ row.display_tape_id }}</td>
+          <td class="nowrap">
+            <span style="font-family:var(--mono);font-size:0.75rem;
+                         background:rgba(45,107,228,0.12);
+                         border:1px solid rgba(45,107,228,0.2);
+                         border-radius:4px;padding:2px 8px">
+              {{ row.station_name }}
+            </span>
+          </td>
+          <td class="nowrap" style="font-family:var(--mono);font-size:0.78rem">
+            {{ row.start_clock }}
+            {% if oos_detection_ids is defined and row.detection_id in oos_detection_ids and oos_schedule_map is defined and oos_schedule_map.get(row.detection_id) %}
+            <div style="font-size:0.68rem;color:#fb923c;margin-top:2px">{{ oos_schedule_map[row.detection_id]["from_t"] }}</div>
+            {% endif %}
+          </td>
+          <td class="nowrap" style="font-family:var(--mono);font-size:0.78rem;color:var(--muted)">
+            {{ row.end_clock }}
+            {% if oos_detection_ids is defined and row.detection_id in oos_detection_ids and oos_schedule_map is defined and oos_schedule_map.get(row.detection_id) %}
+            <div style="font-size:0.68rem;color:#fb923c;margin-top:2px">{{ oos_schedule_map[row.detection_id]["to_t"] }}</div>
+            {% endif %}
+          </td>
+          <td>
+            {% if row.detection_id != 0 %}<span class="badge cat-{{ row.category | lower }}">{{ row.category }}</span>{% else %}<span class="muted">—</span>{% endif %}
+          </td>
+          <td style="font-size:0.8rem;color:var(--chrome)">{{ row.campaign_name }}</td>
+          <td>
+            {% if row.clip_url %}
+            <a href="{{ row.clip_url[0] }}" target="_blank"
+               style="display:inline-flex;align-items:center;justify-content:center;
+                      width:28px;height:28px;border-radius:50%;
+                      background:rgba(45,107,228,0.15);border:1px solid rgba(45,107,228,0.25);
+                      color:#4a8eff;text-decoration:none" title="Play clip">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
+                <polygon points="5,3 19,12 5,21"/>
+              </svg>
+            </a>
+            {% else %}
+            <span class="muted" style="font-size:0.72rem">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- BREAKDOWN CHARTS -->
+<div class="breakdown-grid">
+
+  <!-- By Station -->
+  <div class="breakdown-card">
+    <div class="breakdown-header">Plays by Station</div>
+    {% set max_station = result.by_station.values() | list | max %}
+    {% for name, count in result.by_station.items() %}
+    <div class="breakdown-row">
+      <div class="breakdown-name">{{ name }}</div>
+      <div class="breakdown-bar-wrap">
+        <div class="breakdown-bar">
+          <div class="breakdown-bar-fill" style="width:{{ (count / max_station * 100)|int }}%"></div>
+        </div>
+        <div class="breakdown-count">{{ count }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- By Commercial -->
+  <div class="breakdown-card">
+    <div class="breakdown-header">Plays by Commercial</div>
+    {% set max_comm = result.by_commercial.values() | list | max %}
+    {% for name, count in result.by_commercial.items() %}
+    <div class="breakdown-row">
+      <div class="breakdown-name">{{ name }}</div>
+      <div class="breakdown-bar-wrap">
+        <div class="breakdown-bar">
+          <div class="breakdown-bar-fill" style="width:{{ (count / max_comm * 100)|int }}%"></div>
+        </div>
+        <div class="breakdown-count">{{ count }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+{% else %}
+<!-- EMPTY STATE -->
+<div class="results-panel">
+  <div class="empty-state">
+    <div class="empty-state-icon">📭</div>
+    <div class="empty-state-title">No detections found</div>
+    <p class="muted small" style="margin-top:0.4rem">
+      No commercial airplay was detected for the selected filters.<br>
+      Try adjusting the date range or station.
+    </p>
+  </div>
+</div>
+{% endif %}
+
+{% else %}
+<!-- PROMPT STATE — no report run yet -->
+<div class="results-panel">
+  <div class="empty-state">
+    <div class="empty-state-icon" style="opacity:0.5">📋</div>
+    <div class="empty-state-title">Set your filters and run the report</div>
+    <p class="muted small" style="margin-top:0.4rem">
+      Select a date range above, then click <strong style="color:var(--chrome)">Run Report</strong>.
+    </p>
+  </div>
+</div>
+{% endif %}
+
+{% block scripts %}
+<script>
+// ── Commercial searchable dropdown ──
+var commDropdown = document.getElementById('commercial-dropdown');
+var commSearch   = document.getElementById('commercial-search');
+var commVal      = document.getElementById('commercial-name-val');
+
+commSearch.addEventListener('focus', function() { commDropdown.classList.add('open'); filterCommercials(this.value); });
+document.addEventListener('click', function(e) {
+  if (!commSearch.contains(e.target) && !commDropdown.contains(e.target)) commDropdown.classList.remove('open');
+});
+function filterCommercials(q) {
+  commDropdown.classList.add('open');
+  document.querySelectorAll('#commercial-options .station-picker-option').forEach(function(o) {
+    o.style.display = o.dataset.value.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+function selectCommercial(val) { commSearch.value = val; commVal.value = val; commDropdown.classList.remove('open'); }
+commSearch.addEventListener('input', function() { if (!this.value) commVal.value = ''; });
+
+// ── Campaign searchable dropdown ──
+var campDropdown = document.getElementById('campaign-dropdown');
+var campSearch   = document.getElementById('campaign-search');
+var campVal      = document.getElementById('campaign-id-val');
+
+campSearch.addEventListener('focus', function() { campDropdown.classList.add('open'); filterCampaigns(this.value); });
+document.addEventListener('click', function(e) {
+  if (!campSearch.contains(e.target) && !campDropdown.contains(e.target)) campDropdown.classList.remove('open');
+});
+function filterCampaigns(q) {
+  campDropdown.classList.add('open');
+  document.querySelectorAll('#campaign-options .station-picker-option').forEach(function(o) {
+    o.style.display = o.dataset.label.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+function selectCampaign(id, label) { campSearch.value = label; campVal.value = id; campDropdown.classList.remove('open'); }
+campSearch.addEventListener('input', function() { if (!this.value) campVal.value = ''; });
+
+// ── OOS panel ──
+function toggleRptOosPanel() {
+  var p = document.getElementById('rpt-oos-panel');
+  if (p) p.style.display = p.style.display === 'none' ? '' : 'none';
+}
+function rptToggleAllOos(cb) {
+  document.querySelectorAll('.rpt-oos-check').forEach(function(c) { c.checked = cb.checked; });
+}
+async function rptAcceptSelected() {
+  var ids = Array.from(document.querySelectorAll('.rpt-oos-check:checked')).map(function(c) { return parseInt(c.value); });
+  if (!ids.length) { alert('Please select at least one detection.'); return; }
+  await rptDoAccept(ids);
+}
+async function rptAcceptAll() {
+  var ids = Array.from(document.querySelectorAll('.rpt-oos-check')).map(function(c) { return parseInt(c.value); });
+  await rptDoAccept(ids);
+}
+async function rptDoAccept(ids) {
+  var btn = document.getElementById('rpt-accept-all-btn');
+  var btnSel = document.getElementById('rpt-accept-sel-btn');
+  if (btn) btn.disabled = true;
+  if (btnSel) btnSel.disabled = true;
+  try {
+    var resp = await fetch('/reports/detection/accept-oos', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({detection_ids: ids})
+    });
+    var data = await resp.json();
+    if (data.ok) {
+      data.accepted.forEach(function(id) {
+        var row = document.querySelector('.rpt-oos-row[data-id="' + id + '"]');
+        if (row) row.remove();
+      });
+      var remaining = document.querySelectorAll('.rpt-oos-row').length;
+      var countEl = document.getElementById('rpt-oos-count');
+      if (countEl) countEl.textContent = remaining;
+      if (remaining === 0) {
+        var banner = document.getElementById('rpt-oos-banner');
+        var panel = document.getElementById('rpt-oos-panel');
+        if (banner) banner.style.display = 'none';
+        if (panel) panel.style.display = 'none';
+      }
+      if (data.credits_debited > 0) {
+        var note = document.getElementById('rpt-oos-debit-note');
+        if (note) { note.textContent = data.credits_debited + ' credit' + (data.credits_debited !== 1 ? 's' : '') + ' debited.'; note.style.display = ''; }
+      }
+    } else { alert('Error accepting detections. Please try again.'); }
+  } catch(e) { alert('Network error. Please try again.'); }
+  finally {
+    if (btn) btn.disabled = false;
+    if (btnSel) btnSel.disabled = false;
+  }
+}
+</script>
+{% endblock %}
+
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base_app.html" %}
+{% block title %}Credit Balance — RadioMonitor{% endblock %}
+{% block topbar_title %}Credit Balance{% endblock %}
+{% block content %}
+    <div class="page-eyebrow">Account</div>
+<header class="page-header">
+        <h1>Credit balance</h1>
+        <a href="/account/tokens/history" class="btn btn-ghost">Full history</a>
+    </header>
+
+    <div class="grid-3" style="margin-bottom:var(--space-4)">
+        <article class="card" style="text-align:center">
+            <p class="muted small" style="margin:0">Current balance</p>
+            <p style="font-size:2em;font-weight:700;margin:var(--space-2) 0">{{ "%g"|format(account.TokenBalance|float) }}</p>
+            <p class="muted small">credits</p>
+            <p style="font-size:1.1em;font-weight:600;margin:0.25rem 0 0"
+               data-zar="{{ balance_zar }}" data-usd="{{ balance_usd }}">{{ balance_zar if currency == 'ZAR' else balance_usd }}</p>
+        </article>
+        <article class="card" style="text-align:center">
+            <p class="muted small" style="margin:0">Total purchased</p>
+            <p style="font-size:1.5em;font-weight:600;margin:var(--space-2) 0">{{ "%g"|format(account.TotalPurchased|float) }}</p>
+            <p class="muted small">credits</p>
+            <p style="font-size:0.9em;font-weight:600;margin:0.25rem 0 0"
+               data-zar="{{ purchased_zar }}" data-usd="{{ purchased_usd }}">{{ purchased_zar if currency == 'ZAR' else purchased_usd }}</p>
+        </article>
+        <article class="card" style="text-align:center">
+            <p class="muted small" style="margin:0">Total consumed</p>
+            <p style="font-size:1.5em;font-weight:600;margin:var(--space-2) 0">{{ "%g"|format(account.TotalConsumed|float) }}</p>
+            <p class="muted small">credits</p>
+            <p style="font-size:0.9em;font-weight:600;margin:0.25rem 0 0"
+               data-zar="{{ consumed_zar }}" data-usd="{{ consumed_usd }}">{{ consumed_zar if currency == 'ZAR' else consumed_usd }}</p>
+        </article>
+    </div>
+
+    <div class="card placeholder" style="margin-bottom:var(--space-4)">
+        <p class="muted small"><strong>1 credit = 1 station-hour of monitoring.</strong> Cost is calculated as: stations × duration in hours.</p>
+        <p class="muted small">To purchase additional credits, contact RadioMonitor.</p>
+    </div>
+
+    {% if recent_txs %}
+    <h2>Recent transactions</h2>
+    <table class="data-table">
+        <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Balance after</th><th>Description</th></tr></thead>
+        <tbody>
+        {% for tx in recent_txs %}
+        <tr>
+            <td class="muted">{{ tx.CreatedAt.strftime("%Y-%m-%d %H:%M") }}</td>
+            <td><span class="badge badge-{{ 'active' if tx.Type in ('purchase','credit') else 'pending' if tx.Type == 'adjustment' else 'withdrawn' }}">{{ tx.Type }}</span></td>
+            <td style="color:{{ '#00c853' if tx.TokenAmount > 0 else '#ff1744' }}">
+                {{ "%g"|format(tx.TokenAmount|float) }}
+            </td>
+            <td class="muted">{{ "%g"|format(tx.BalanceAfter|float) }}</td>
+            <td class="muted">{{ tx.Description or "—" }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <a href="/account/tokens/history" class="nav-link" style="display:block;margin-top:var(--space-2)">View full history →</a>
+    {% endif %}
+{% endblock %}

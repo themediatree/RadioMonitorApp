@@ -1,0 +1,89 @@
+{% extends "base_app.html" %}
+{% block title %}Internal Users — RadioMonitor{% endblock %}
+{% block topbar_title %}Internal Users{% endblock %}
+
+{% block content %}
+<header class="page-header">
+  <h1>Internal Users</h1>
+  <a href="/admin/users/new" class="btn btn-primary">+ New User</a>
+</header>
+
+<div class="filter-bar">
+  <input type="text" id="user-search" class="form-input"
+         placeholder="Search name or email…" style="flex:1">
+</div>
+
+{% if users %}
+<div class="table-scroll">
+<table class="data-table" id="user-table">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Status</th>
+      <th>Can Download</th>
+      <th>Created</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for u in users %}
+  <tr>
+    <td><strong>{{ u.FullName or '—' }}</strong></td>
+    <td style="font-family:var(--mono);font-size:0.8rem">{{ u.Email }}</td>
+    <td>
+      {% if u.IsActive %}
+      <span class="badge badge-active">Active</span>
+      {% else %}
+      <span class="badge badge-inactive">Inactive</span>
+      {% endif %}
+    </td>
+    <td>
+      {% if u.CanDownload %}
+      <span style="color:#4ade80;font-size:0.8rem">✓ Yes</span>
+      {% else %}
+      <span style="color:var(--muted);font-size:0.8rem">— No</span>
+      {% endif %}
+    </td>
+    <td style="font-family:var(--mono);font-size:0.75rem;color:var(--muted)">
+      {{ u.CreatedAt.strftime('%d %b %Y') if u.CreatedAt else '—' }}
+    </td>
+    <td style="text-align:right">
+      <a href="/admin/users/{{ u.UserID }}/edit" class="btn btn-ghost btn-sm">Edit</a>
+      {% if u.UserID != user.UserID and u.IsActive %}
+      <form method="post" action="/admin/users/{{ u.UserID }}/deactivate"
+            style="display:inline"
+            onsubmit="return confirm('Deactivate {{ u.FullName or u.Email }}?')">
+        <button type="submit" class="btn btn-ghost btn-sm"
+                style="color:var(--red);border-color:rgba(220,38,38,0.3)">
+          Deactivate
+        </button>
+      </form>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-state-icon">👤</div>
+  <div class="empty-state-title">No internal users yet</div>
+  <p class="empty-state-body">Create the first internal user to get started.</p>
+  <a href="/admin/users/new" class="btn btn-primary">+ New User</a>
+</div>
+{% endif %}
+
+{% block scripts %}
+<script>
+document.getElementById('user-search').addEventListener('input', function() {
+  var q = this.value.toLowerCase();
+  document.querySelectorAll('#user-table tbody tr').forEach(function(row) {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+});
+</script>
+{% endblock %}
+
+{% endblock %}

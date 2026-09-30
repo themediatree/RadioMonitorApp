@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; }
+@page {
+  size: A4 portrait;
+  margin: 16mm 16mm 20mm 16mm;
+  @bottom-center {
+    content: "NOCTIV RadioMonitor · Certificate of Broadcast · " attr(data-cert) " · Page " counter(page) " of " counter(pages);
+    font-family: 'JetBrains Mono', monospace; font-size: 6.5pt; color: #94a3b8;
+  }
+}
+body { font-family: 'DM Sans', sans-serif; font-size: 9pt; color: #1e293b; background: white; }
+.qr-cell { width: 70px; text-align: center; vertical-align: middle; }
+.qr-cell canvas { width: 64px !important; height: 64px !important; display: block; margin: 0 auto; }
+.qr-na { font-family: 'JetBrains Mono', monospace; font-size: 6pt; color: #94a3b8; }
+
+/* ── CERTIFICATE HEADER ── */
+.cert-header {
+  border-bottom: 3px solid #0a1628;
+  padding-bottom: 12px; margin-bottom: 14px;
+  display: flex; justify-content: space-between; align-items: flex-start;
+}
+.cert-brand-block { }
+.cert-brand {
+  font-family: 'DM Sans', sans-serif; font-weight: 800;
+  font-size: 22pt; color: #0a1628; letter-spacing: -0.03em; line-height: 1;
+}
+.cert-brand span { color: #0d8b8b; }
+.cert-subtitle {
+  font-family: 'JetBrains Mono', monospace; font-size: 7pt;
+  color: #64748b; letter-spacing: 0.12em; text-transform: uppercase; margin-top: 3px;
+}
+.cert-right { text-align: right; }
+.cert-number {
+  font-family: 'JetBrains Mono', monospace; font-size: 8pt;
+  color: #0d8b8b; font-weight: 500; letter-spacing: 0.06em;
+}
+.cert-issued { font-size: 8pt; color: #64748b; margin-top: 3px; }
+
+/* ── DECLARATION BOX ── */
+.declaration {
+  background: #f8fafc; border: 1px solid #e2e8f0;
+  border-left: 4px solid #0d8b8b;
+  border-radius: 4px; padding: 12px 14px; margin-bottom: 14px;
+  font-size: 8.5pt; color: #1e293b; line-height: 1.6;
+}
+.declaration strong { color: #0a1628; }
+
+/* ── ADDRESSEE GRID ── */
+.addressee-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px; margin-bottom: 14px;
+}
+.addr-field { }
+.addr-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 6pt;
+  color: #94a3b8; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 2px;
+}
+.addr-value { font-size: 8.5pt; color: #1e293b; font-weight: 600; }
+
+/* ── SUMMARY STRIP ── */
+.stat-strip {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 8px; margin-bottom: 14px;
+}
+.stat-box {
+  background: #f8fafc; border: 1px solid #e2e8f0;
+  border-top: 3px solid #0d8b8b; border-radius: 4px; padding: 8px 10px;
+}
+.stat-box:nth-child(2) { border-top-color: #22c55e; }
+.stat-box:nth-child(3) { border-top-color: #7c4dff; }
+.stat-label { font-family: 'JetBrains Mono', monospace; font-size: 6pt; color: #94a3b8; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 2px; }
+.stat-value { font-family: 'JetBrains Mono', monospace; font-size: 16pt; font-weight: 500; color: #0a1628; line-height: 1; }
+.stat-sub   { font-size: 7pt; color: #94a3b8; margin-top: 1px; }
+
+/* ── COMMERCIAL BLOCK ── */
+.comm-block { margin-bottom: 16px; page-break-inside: avoid; }
+.comm-header {
+  background: #0a1628; color: white;
+  padding: 8px 12px; border-radius: 4px 4px 0 0;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.comm-tape-id {
+  font-family: 'JetBrains Mono', monospace; font-size: 10pt;
+  font-weight: 500; color: white;
+}
+.comm-brand { font-size: 7.5pt; color: #94a3b8; margin-top: 1px; }
+.comm-airing-count {
+  font-family: 'JetBrains Mono', monospace; font-size: 7pt;
+  background: rgba(13,139,139,0.3); color: #5eead4;
+  border-radius: 10px; padding: 2px 10px; white-space: nowrap;
+}
+
+table { width: 100%; border-collapse: collapse; font-size: 7.5pt; }
+.comm-block table { border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 4px 4px; overflow: hidden; }
+thead tr { background: #f1f5f9; }
+thead th {
+  font-family: 'JetBrains Mono', monospace; font-size: 6pt;
+  color: #64748b; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 5px 8px; text-align: left; border-bottom: 1px solid #e2e8f0;
+}
+tbody tr:nth-child(even) { background: #f8fafc; }
+tbody tr:nth-child(odd)  { background: white; }
+tbody td { padding: 4px 8px; color: #1e293b; border-bottom: 1px solid #f1f5f9; }
+tbody tr:last-child td { border-bottom: none; }
+.mono   { font-family: 'JetBrains Mono', monospace; }
+.muted  { color: #94a3b8; }
+.bold   { font-weight: 600; }
+
+.match-wrap { display: flex; align-items: center; gap: 4px; }
+.match-bar  { width: 30px; height: 3px; background: #e2e8f0; border-radius: 2px; overflow: hidden; }
+.match-fill { height: 100%; border-radius: 2px; background: #0d8b8b; }
+
+.type-badge {
+  display: inline-block; padding: 1px 5px; border-radius: 2px;
+  font-family: 'JetBrains Mono', monospace; font-size: 5.5pt;
+  background: #dbeafe; color: #1d4ed8;
+}
+
+/* ── SIGNATURE BLOCK ── */
+.sig-block {
+  margin-top: 20px; padding-top: 14px;
+  border-top: 1px solid #e2e8f0;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 30px;
+}
+.sig-field { }
+.sig-line {
+  border-bottom: 1px solid #0a1628; height: 28px; margin-bottom: 5px;
+}
+.sig-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 6.5pt;
+  color: #64748b; letter-spacing: 0.08em;
+}
+.sig-prefill { font-size: 8pt; color: #0a1628; font-weight: 600; padding-top: 6px; }
+
+/* ── FOOTER NOTE ── */
+.footer-note {
+  margin-top: 12px; padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+  font-size: 6.5pt; color: #94a3b8;
+  font-family: 'JetBrains Mono', monospace; line-height: 1.6;
+}
+</style>
+</head>
+<body>
+
+<!-- CERTIFICATE HEADER -->
+<div class="cert-header">
+  <div class="cert-brand-block">
+    <div class="cert-brand">NOC<span>TIV</span></div>
+    <div class="cert-subtitle">RadioMonitor · Certificate of Broadcast</div>
+  </div>
+  <div class="cert-right">
+    <div class="cert-number">{{ result.certificate_number }}</div>
+    <div class="cert-issued">Issued {{ result.generated_at.strftime("%d %B %Y") }}</div>
+  </div>
+</div>
+
+<!-- DECLARATION -->
+<div class="declaration">
+  NOCTIV (Pty) Ltd hereby certifies that the commercial airings listed in this document were detected and
+  verified by the <strong>NOCTIV RadioMonitor</strong> automated broadcast monitoring system. Each entry
+  represents a confirmed detection logged with timestamp, station, and acoustic fingerprint match score.
+  This certificate is issued to <strong>{{ result.subscriber_company }}</strong> as evidence of broadcast
+  for the period
+  <strong>{{ result.date_from.strftime("%d %B %Y") if result.date_from else "all available dates" }}</strong>
+  {% if result.date_to %} to <strong>{{ result.date_to.strftime("%d %B %Y") }}</strong>{% endif %}.
+</div>
+
+<!-- ADDRESSEE -->
+<div class="addressee-grid">
+  <div class="addr-field">
+    <div class="addr-label">Issued To</div>
+    <div class="addr-value">{{ result.subscriber_company }}</div>
+  </div>
+  <div class="addr-field">
+    <div class="addr-label">Contact</div>
+    <div class="addr-value">{{ result.subscriber_email or result.subscriber_name }}</div>
+  </div>
+  <div class="addr-field">
+    <div class="addr-label">Monitored Stations</div>
+    <div class="addr-value">{{ result.all_stations | join(", ") or "All stations" }}</div>
+  </div>
+</div>
+
+<!-- SUMMARY -->
+<div class="stat-strip">
+  <div class="stat-box">
+    <div class="stat-label">Total Airings</div>
+    <div class="stat-value">{{ result.total_airings }}</div>
+    <div class="stat-sub">confirmed broadcasts</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-label">Commercials</div>
+    <div class="stat-value">{{ result.total_commercials }}</div>
+    <div class="stat-sub">unique spots</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-label">Stations</div>
+    <div class="stat-value">{{ result.all_stations | length }}</div>
+    <div class="stat-sub">with detected airplay</div>
+  </div>
+</div>
+
+<!-- COMMERCIAL EVIDENCE BLOCKS -->
+{% for comm in result.commercials %}
+<div class="comm-block">
+  <div class="comm-header">
+    <div>
+      <div class="comm-tape-id">{{ comm.display_tape_id }}</div>
+      <div class="comm-brand">
+        {% if comm.brand %}{{ comm.brand }} · {% endif %}
+        Campaign: {{ comm.campaign_name }} ·
+        {{ comm.date_range }} ·
+        {{ comm.stations | join(", ") }}
+      </div>
+    </div>
+    <div class="comm-airing-count">{{ comm.total_airings }} airing{{ 's' if comm.total_airings != 1 else '' }}</div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Date</th>
+        <th>Station</th>
+        <th>Start</th>
+        <th>End</th>
+        <th>Type</th>
+        <th>Clip</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in comm.airings %}
+      <tr>
+        <td class="mono muted">{{ loop.index }}</td>
+        <td class="mono bold">{{ a.chunk_date }}</td>
+        <td class="mono" style="font-size:7pt">{{ a.station_name }}</td>
+        <td class="mono bold">{{ a.start_clock }}</td>
+        <td class="mono muted">{{ a.end_clock }}</td>
+        <td><span class="type-badge">{{ a.category }}</span></td>
+        <td class="qr-cell">
+          {% if a.clip_url %}
+          <a href="{{ a.clip_url[0] }}">
+            <img src="data:image/png;base64,{{ a.clip_url[1] }}"
+                 style="width:64px;height:64px;display:block;margin:0 auto;image-rendering:pixelated">
+          </a>
+          {% else %}
+          <span class="qr-na">N/A</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endfor %}
+
+<!-- SIGNATURE BLOCK -->
+<div class="sig-block">
+  <div class="sig-field">
+    <div class="sig-prefill">NOCTIV (Pty) Ltd</div>
+    <div class="sig-line"></div>
+    <div class="sig-label">Authorised Signatory · NOCTIV (Pty) Ltd</div>
+  </div>
+  <div class="sig-field">
+    <div style="height:28px"></div>
+    <div class="sig-line"></div>
+    <div class="sig-label">Date</div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer-note">
+  Certificate No: {{ result.certificate_number }} ·
+  Generated {{ result.generated_at.strftime("%d %B %Y at %H:%M") }} UTC by NOCTIV RadioMonitor ·
+  This certificate is computer-generated and is valid without a handwritten signature.
+  Detection data is retained for 24 months. For verification, contact support@noctiv.co.za.
+  NOCTIV (Pty) Ltd · Johannesburg, South Africa · www.noctiv.co.za
+</div>
+
+</body>
+</html>

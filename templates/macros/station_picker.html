@@ -1,0 +1,38 @@
+{#
+Reusable searchable multi-select station picker.
+Usage: {% from "macros/station_picker.html" import station_picker %}
+       {{ station_picker(stations, selected_ids=[]) }}
+
+Renders a text input that opens a searchable dropdown with checkboxes.
+Selected stations appear as removable tags above the input.
+Submits as multiple `station_ids` form fields.
+Dropdown stays open until user clicks Done or clicks outside.
+#}
+{% macro station_picker(stations, selected_ids=[], field_id="station-picker") %}
+<div class="station-picker" id="{{ field_id }}">
+    <div class="station-picker-tags" id="{{ field_id }}-tags"></div>
+    <input type="text" class="station-picker-input" id="{{ field_id }}-input"
+           placeholder="Click to select stations…" readonly
+           onclick="document.getElementById('{{ field_id }}-dropdown').classList.toggle('open'); document.getElementById('{{ field_id }}-search').focus();">
+    <div class="station-picker-dropdown" id="{{ field_id }}-dropdown">
+        <input type="text" class="station-picker-search" id="{{ field_id }}-search"
+               placeholder="Search stations…"
+               oninput="window.__stationPickerFilter('{{ field_id }}', this.value)">
+        <div id="{{ field_id }}-options">
+        {% for s in stations %}
+            <label class="station-picker-option" data-name="{{ s.StationName|lower }}">
+                <input type="checkbox" name="station_ids" value="{{ s.StationID }}"
+                       {{ 'checked' if s.StationID|string in selected_ids|map('string')|list }}
+                       onchange="window.__stationPickerUpdate('{{ field_id }}')"
+                       data-station-name="{{ s.StationName }}">
+                {{ s.StationName }}
+            </label>
+        {% endfor %}
+        </div>
+        <button type="button" class="station-picker-done"
+                onclick="document.getElementById('{{ field_id }}-dropdown').classList.remove('open')">
+            ✓ Done
+        </button>
+    </div>
+</div>
+{% endmacro %}

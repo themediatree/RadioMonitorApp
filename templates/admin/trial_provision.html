@@ -1,0 +1,244 @@
+{% extends "base_app.html" %}
+{% block title %}Trial Provisioning — {{ sub.CompanyName or sub.Name }}{% endblock %}
+{% block topbar_title %}Trial Provisioning{% endblock %}
+
+{% block content %}
+<style>
+.trial-header {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 1.5rem;
+  margin-bottom: 2rem; flex-wrap: wrap;
+}
+.trial-header h1 {
+  font-family: var(--display); font-size: 1.5rem;
+  font-weight: 800; color: var(--white); letter-spacing: -0.02em;
+}
+.trial-header-sub { font-size: 0.8rem; color: var(--muted); margin-top: 0.3rem; }
+
+.trial-status-badge {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.4rem 1rem; border-radius: 20px;
+  font-family: var(--mono); font-size: 0.72rem; font-weight: 500;
+}
+.trial-active   { background: rgba(0,200,83,0.15); color: #4ade80; border: 1px solid rgba(0,200,83,0.3); }
+.trial-expired  { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+.trial-none     { background: rgba(192,207,224,0.08); color: var(--muted); border: 1px solid var(--border); }
+
+.section-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden; margin-bottom: 1.25rem;
+}
+.section-card-header {
+  padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);
+  font-family: var(--display); font-size: 0.9rem;
+  font-weight: 600; color: var(--white);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.section-card-body { padding: 1.25rem; }
+
+.alloc-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;
+}
+.alloc-field { }
+.alloc-label {
+  font-family: var(--mono); font-size: 0.65rem;
+  color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 0.4rem;
+}
+.alloc-input-wrap {
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.alloc-bar-wrap {
+  flex: 1; height: 6px; background: rgba(255,255,255,0.08);
+  border-radius: 3px; overflow: hidden; margin-top: 0.5rem;
+}
+.alloc-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+.bar-commercial { background: linear-gradient(90deg, var(--cobalt), var(--glow)); }
+.bar-song       { background: linear-gradient(90deg, #7c4dff, #b388ff); }
+.bar-word       { background: linear-gradient(90deg, #ff6d00, #ff9100); }
+.bar-transcript { background: linear-gradient(90deg, #00c853, #00e676); }
+
+.consumed-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.6rem 0; border-bottom: 1px solid rgba(192,207,224,0.06);
+  font-size: 0.82rem;
+}
+.consumed-row:last-child { border-bottom: none; }
+.consumed-label { color: var(--pale); }
+.consumed-bar-wrap { display: flex; align-items: center; gap: 0.75rem; width: 200px; }
+.consumed-bar { flex: 1; height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+.consumed-bar-fill { height: 100%; border-radius: 3px; background: var(--glow); }
+.consumed-nums { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
+</style>
+
+<div class="trial-header">
+  <div>
+    <div style="font-family:var(--mono);font-size:0.62rem;color:var(--glow);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:0.4rem">
+      Admin / Subscribers / Trial
+    </div>
+    <h1>{{ sub.CompanyName or sub.Name }}</h1>
+    <div class="trial-header-sub">{{ sub.Name }} · {{ sub.SubscriberType }} · {{ sub.SubscriptionPlan }}</div>
+  </div>
+  <div style="display:flex;gap:0.75rem;align-items:flex-start">
+    {% if trial_cfg %}
+      {% if trial_cfg.is_active %}
+      <span class="trial-status-badge trial-active">● Active · {{ trial_cfg.days_remaining }} day{{ 's' if trial_cfg.days_remaining != 1 else '' }} left</span>
+      <form method="post" action="/admin/subscribers/{{ sub.SubscriberID }}/trial/expire"
+            onsubmit="return confirm('Expire this trial immediately?')">
+        <button type="submit" class="btn btn-ghost" style="color:#f87171;border-color:rgba(239,68,68,0.3)">
+          Expire Now
+        </button>
+      </form>
+      {% else %}
+      <span class="trial-status-badge trial-expired">● Expired {{ trial_cfg.TrialExpiresAt.strftime("%d %b %Y") }}</span>
+      {% endif %}
+    {% else %}
+      <span class="trial-status-badge trial-none">No trial configured</span>
+    {% endif %}
+    <a href="/admin/subscribers/{{ sub.SubscriberID }}/edit" class="btn btn-ghost">← Back to subscriber</a>
+  </div>
+</div>
+
+<!-- CURRENT CONSUMPTION (if trial active) -->
+{% if trial_cfg and consumed %}
+<div class="section-card">
+  <div class="section-card-header">Credit Usage</div>
+  <div class="section-card-body">
+    {% set service_map = [
+      ('commercial',    'Commercial Detection', trial_cfg.MaxCommercial,    'bar-commercial'),
+      ('song',          'Song Monitoring',      trial_cfg.MaxSong,          'bar-song'),
+      ('word',          'Keyword Monitoring',   trial_cfg.MaxWord,          'bar-word'),
+      ('transcription', 'Transcription',        trial_cfg.MaxTranscription, 'bar-transcript'),
+    ] %}
+    {% for ref, label, cap, bar_class in service_map %}
+    {% set used = consumed.get(ref, 0) %}
+    {% set pct = [(used / cap * 100)|int, 100] | min if cap > 0 else 0 %}
+    <div class="consumed-row">
+      <div class="consumed-label">{{ label }}</div>
+      <div class="consumed-bar-wrap">
+        <div class="consumed-bar">
+          <div class="consumed-bar-fill {{ bar_class }}" style="width:{{ pct }}%"></div>
+        </div>
+        <div class="consumed-nums">{{ "%.1f"|format(used) }} / {{ "%.0f"|format(cap) }} cr</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- PROVISION FORM -->
+<div class="section-card">
+  <div class="section-card-header">
+    {{ "Update Trial Configuration" if trial_cfg else "Provision Trial Account" }}
+  </div>
+  <div class="section-card-body">
+    <form method="post" action="/admin/subscribers/{{ sub.SubscriberID }}/trial">
+
+      <div class="form-field" style="margin-bottom:1rem">
+        <label class="form-label">Trial Station</label>
+        <select name="station_id" class="form-select" required>
+          <option value="">— Select station —</option>
+          {% for st in stations %}
+          <option value="{{ st.StationID }}"
+            {% if trial_cfg and trial_cfg.StationID == st.StationID %}selected{% endif %}>
+            {{ st.StationName }}
+          </option>
+          {% endfor %}
+        </select>
+        <div class="form-hint">Trial user may only monitor this station.</div>
+      </div>
+
+      <div class="form-field" style="margin-bottom:1.5rem">
+        <label class="form-label">Trial Duration</label>
+        <div style="display:flex;align-items:center;gap:0.75rem">
+          <input type="number" name="duration_days" class="form-input" style="width:80px"
+                 min="1" max="30" value="{{ 7 }}">
+          <span style="font-size:0.82rem;color:var(--muted)">days from today</span>
+        </div>
+      </div>
+
+      <div style="font-family:var(--mono);font-size:0.65rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:1rem">
+        Per-Service Credit Allocation
+      </div>
+
+      <div class="alloc-grid" style="margin-bottom:1.5rem">
+        <div class="alloc-field">
+          <div class="alloc-label" style="color:#4a8eff">Commercial Detection</div>
+          <div class="alloc-input-wrap">
+            <input type="number" name="max_commercial" class="form-input" style="width:100px"
+                   min="0" max="168" step="1"
+                   value="{{ trial_cfg.MaxCommercial|int if trial_cfg else 60 }}"
+                   oninput="updateBar('bar-comm', this.value, 168)">
+            <span style="font-size:0.8rem;color:var(--muted)">credits</span>
+          </div>
+          <div class="alloc-bar-wrap"><div id="bar-comm" class="alloc-bar-fill bar-commercial" style="width:{{ (trial_cfg.MaxCommercial / 168 * 100)|int if trial_cfg else 36 }}%;height:100%"></div></div>
+        </div>
+        <div class="alloc-field">
+          <div class="alloc-label" style="color:#b388ff">Song Monitoring</div>
+          <div class="alloc-input-wrap">
+            <input type="number" name="max_song" class="form-input" style="width:100px"
+                   min="0" max="168" step="1"
+                   value="{{ trial_cfg.MaxSong|int if trial_cfg else 40 }}"
+                   oninput="updateBar('bar-song', this.value, 168)">
+            <span style="font-size:0.8rem;color:var(--muted)">credits</span>
+          </div>
+          <div class="alloc-bar-wrap"><div id="bar-song" class="alloc-bar-fill bar-song" style="width:{{ (trial_cfg.MaxSong / 168 * 100)|int if trial_cfg else 24 }}%;height:100%"></div></div>
+        </div>
+        <div class="alloc-field">
+          <div class="alloc-label" style="color:#ff9100">Keyword Monitoring</div>
+          <div class="alloc-input-wrap">
+            <input type="number" name="max_word" class="form-input" style="width:100px"
+                   min="0" max="168" step="1"
+                   value="{{ trial_cfg.MaxWord|int if trial_cfg else 40 }}"
+                   oninput="updateBar('bar-word', this.value, 168)">
+            <span style="font-size:0.8rem;color:var(--muted)">credits</span>
+          </div>
+          <div class="alloc-bar-wrap"><div id="bar-word" class="alloc-bar-fill bar-word" style="width:{{ (trial_cfg.MaxWord / 168 * 100)|int if trial_cfg else 24 }}%;height:100%"></div></div>
+        </div>
+        <div class="alloc-field">
+          <div class="alloc-label" style="color:#4ade80">Transcription</div>
+          <div class="alloc-input-wrap">
+            <input type="number" name="max_transcription" class="form-input" style="width:100px"
+                   min="0" max="168" step="1"
+                   value="{{ trial_cfg.MaxTranscription|int if trial_cfg else 28 }}"
+                   oninput="updateBar('bar-trans', this.value, 168)">
+            <span style="font-size:0.8rem;color:var(--muted)">credits</span>
+          </div>
+          <div class="alloc-bar-wrap"><div id="bar-trans" class="alloc-bar-fill bar-transcript" style="width:{{ (trial_cfg.MaxTranscription / 168 * 100)|int if trial_cfg else 17 }}%;height:100%"></div></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:0.75rem;align-items:center">
+        <button type="submit" class="btn btn-primary">
+          {{ "Update Trial" if trial_cfg else "Provision Trial" }}
+        </button>
+        <span id="total-display" style="font-family:var(--mono);font-size:0.78rem;color:var(--muted)">
+          Total: <span id="total-val">168</span> credits
+        </span>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+function updateBar(barId, value, max) {
+  var pct = Math.min(100, Math.max(0, (parseFloat(value) / max) * 100));
+  document.getElementById(barId).style.width = pct + '%';
+  updateTotal();
+}
+function updateTotal() {
+  var inputs = ['max_commercial','max_song','max_word','max_transcription'];
+  var total = 0;
+  inputs.forEach(function(name) {
+    var el = document.querySelector('[name="' + name + '"]');
+    if (el) total += parseFloat(el.value) || 0;
+  });
+  document.getElementById('total-val').textContent = total.toFixed(0);
+}
+</script>
+{% endblock %}
+
+{% endblock %}

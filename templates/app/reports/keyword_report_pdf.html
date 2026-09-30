@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; }
+@page {
+  size: A4 landscape;
+  margin: 14mm 14mm 18mm 14mm;
+  @bottom-center {
+    content: "NOCTIV RadioMonitor · Keyword Detection Report · Page " counter(page) " of " counter(pages);
+    font-family: 'JetBrains Mono', monospace; font-size: 7pt; color: #94a3b8;
+  }
+}
+body { font-family: 'DM Sans', sans-serif; font-size: 9pt; color: #1e293b; background: white; }
+
+.pdf-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding-bottom: 10px; border-bottom: 2px solid #ff6d00; margin-bottom: 14px;
+}
+.pdf-brand { font-family: 'DM Sans', sans-serif; font-weight: 800; font-size: 18pt; color: #0a1628; letter-spacing: -0.02em; line-height: 1; }
+.pdf-brand span { color: #ff6d00; }
+.pdf-report-title { font-size: 9pt; color: #64748b; margin-top: 3px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+.pdf-meta { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 7.5pt; color: #64748b; line-height: 1.7; }
+.pdf-meta strong { color: #1e293b; }
+
+.pdf-stat-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+.pdf-stat { background: #f8fafc; border: 1px solid #e2e8f0; border-top: 3px solid #ff6d00; border-radius: 6px; padding: 8px 10px; }
+.pdf-stat:nth-child(2) { border-top-color: #22c55e; }
+.pdf-stat:nth-child(3) { border-top-color: #2d6be4; }
+.pdf-stat:nth-child(4) { border-top-color: #7c4dff; }
+.pdf-stat-label { font-family: 'JetBrains Mono', monospace; font-size: 6.5pt; color: #94a3b8; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 3px; }
+.pdf-stat-value { font-family: 'JetBrains Mono', monospace; font-size: 16pt; font-weight: 500; color: #0a1628; line-height: 1; }
+.pdf-stat-sub { font-size: 7pt; color: #94a3b8; margin-top: 2px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 8pt; margin-bottom: 14px; }
+thead tr { background: #1a2744; }
+thead th { font-family: 'JetBrains Mono', monospace; font-size: 6.5pt; color: #94a3b8; letter-spacing: 0.1em; text-transform: uppercase; padding: 6px 8px; text-align: left; font-weight: 500; }
+tbody tr:nth-child(even) { background: #f8fafc; }
+tbody tr:nth-child(odd)  { background: #ffffff; }
+tbody td { padding: 5px 8px; color: #1e293b; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.muted { color: #94a3b8; }
+.bold { font-weight: 600; }
+
+.kw-badge {
+  display: inline-block; padding: 1px 7px; border-radius: 3px;
+  background: #ffedd5; color: #c2410c;
+  font-family: 'JetBrains Mono', monospace; font-size: 7pt; font-weight: 500;
+}
+
+.breakdown-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+.breakdown-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; }
+.breakdown-title { font-family: 'JetBrains Mono', monospace; font-size: 6.5pt; color: #64748b; letter-spacing: 0.1em; text-transform: uppercase; padding: 6px 10px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; }
+.breakdown-row { display: flex; align-items: center; padding: 4px 10px; border-bottom: 1px solid #f1f5f9; gap: 8px; }
+.breakdown-row:last-child { border-bottom: none; }
+.b-name { flex: 1; font-size: 7.5pt; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.b-bar  { width: 60px; height: 5px; background: #e2e8f0; border-radius: 2px; overflow: hidden; }
+.b-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, #ff6d00, #ff9100); }
+.b-count { font-family: 'JetBrains Mono', monospace; font-size: 7pt; color: #475569; width: 22px; text-align: right; }
+
+.pdf-footer-note { margin-top: 10px; padding-top: 8px; border-top: 1px solid #e2e8f0; font-size: 7pt; color: #94a3b8; font-family: 'JetBrains Mono', monospace; }
+
+/* ── STATION GROUP HEADER ── */
+
+
+
+
+
+
+/* Station group header - definitive */
+tr.st-hdr td {
+  background-color: #d0d7e0 !important;
+  color: #1e293b !important;
+  padding: 7px 8px !important;
+  border-top: 2px solid #2d6be4 !important;
+  border-bottom: 1px solid #d0d7e0 !important;
+}
+tbody tr.st-hdr:nth-child(even) td,
+tbody tr.st-hdr:nth-child(odd) td {
+  background-color: #d0d7e0 !important;
+}
+.st-hdr-inner { display: flex; align-items: center; gap: 8px; }
+.st-hdr-inner img { height: 22px; width: auto; border-radius: 3px; object-fit: contain; }
+.st-hdr-name { font-weight: 700; font-size: 8.5pt; color: #1e293b !important; }
+.st-hdr-count { font-size: 7pt; color: #64748b !important; margin-left: 4px; }
+.zero-row { opacity: 0.5; font-style: italic; }
+</style>
+</head>
+<body>
+
+<div class="pdf-header">
+  <div>
+    <div class="pdf-brand">NOC<span>TIV</span></div>
+    <div class="pdf-report-title">Keyword Detection Report</div>
+  </div>
+  <div class="pdf-meta">
+    <div><strong>Period</strong>
+      {{ result.date_from.strftime("%d %b %Y") if result.date_from else "All dates" }}
+      {% if result.date_to %}– {{ result.date_to.strftime("%d %b %Y") }}{% endif %}
+    </div>
+    <div><strong>Generated</strong> {{ result.generated_at.strftime("%d %b %Y %H:%M") }} UTC</div>
+    <div><strong>Total records</strong> {{ result.total }}</div>
+  </div>
+</div>
+
+<div class="pdf-stat-strip">
+  <div class="pdf-stat">
+    <div class="pdf-stat-label">Total Hits</div>
+    <div class="pdf-stat-value">{{ result.total_hits }}</div>
+    <div class="pdf-stat-sub">detections in period</div>
+  </div>
+  <div class="pdf-stat">
+    <div class="pdf-stat-label">Keywords</div>
+    <div class="pdf-stat-value">{{ result.unique_keywords }}</div>
+    <div class="pdf-stat-sub">unique keywords</div>
+  </div>
+  <div class="pdf-stat">
+    <div class="pdf-stat-label">Stations</div>
+    <div class="pdf-stat-value">{{ result.unique_stations }}</div>
+    <div class="pdf-stat-sub">stations with hits</div>
+  </div>
+  <div class="pdf-stat">
+    <div class="pdf-stat-label">Top Keyword</div>
+    {% set top = result.by_keyword.items() | list | first %}
+    <div class="pdf-stat-value" style="font-size:0.85rem;padding-top:0.4rem">
+      {% if top %}{{ top[0] }}{% else %}—{% endif %}
+    </div>
+    <div class="pdf-stat-sub">{% if top %}{{ top[1] }} hits{% endif %}</div>
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Keyword</th>
+      <th>Start</th>
+      <th>End</th>
+      <th>Clip</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for station_name, station_rows in result.rows_by_station.items() %}
+    <tr class="st-hdr">
+      <td colspan="5">
+        <div class="st-hdr-inner">
+          {% set logo_url = result.station_logo_map.get(station_name) %}
+          {% if logo_url %}<img src="{{ logo_url }}" onerror="this.style.display='none'" alt="{{ station_name }}">{% endif %}
+          <span class="st-hdr-name">{{ station_name }}</span>
+          <span class="st-hdr-count">
+            {% set det_count = namespace(n=0) %}{% for _r in station_rows %}{% if _r.detection_id is defined and _r.detection_id != 0 %}{% set det_count.n = det_count.n + 1 %}{% elif _r.plays is defined and _r.plays > 0 %}{% set det_count.n = det_count.n + 1 %}{% elif _r.word_detection_id is defined and _r.word_detection_id != 0 %}{% set det_count.n = det_count.n + 1 %}{% endif %}{% endfor %}
+            {% if det_count.n > 0 %}{{ det_count.n }} detection{{ 's' if det_count != 1 }}{% else %}No detections in period{% endif %}
+          </span>
+        </div>
+      </td>
+    </tr>
+    {% for row in station_rows %}
+    <tr {% if row.word_detection_id == 0 %}class="zero-row"{% endif %}>
+      <td class="mono muted">{% if row.word_detection_id == 0 %}—{% else %}{{ row.chunk_date }}{% endif %}</td>
+      <td>{% if row.word_detection_id == 0 %}<span class="kw-badge" style="opacity:0.5">—</span>{% else %}<span class="kw-badge">{{ row.keyword }}</span>{% endif %}</td>
+      <td class="mono">{{ row.start_clock }}</td>
+      <td class="mono muted">{{ row.end_clock }}</td>
+      <td style="width:52px;text-align:center;vertical-align:middle">
+        {% if row.clip_url and row.word_detection_id != 0 %}
+        <a href="{{ row.clip_url[0] }}">
+          <img src="data:image/png;base64,{{ row.clip_url[1] }}"
+               style="width:48px;height:48px;display:block;margin:0 auto;image-rendering:pixelated">
+        </a>
+        {% else %}<span style="font-family:monospace;font-size:6pt;color:#94a3b8">N/A</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if result.by_station or result.by_keyword %}
+<div class="breakdown-grid">
+  <div class="breakdown-section">
+    <div class="breakdown-title">Hits by Station</div>
+    {% set max_s = result.by_station.values() | list | max %}
+    {% for name, count in result.by_station.items() %}
+    <div class="breakdown-row">
+      <div class="b-name">{{ name }}</div>
+      <div class="b-bar"><div class="b-fill" style="width:{{ (count / max_s * 100)|int }}%"></div></div>
+      <div class="b-count">{{ count }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="breakdown-section">
+    <div class="breakdown-title">Hits by Keyword</div>
+    {% set max_k = result.by_keyword.values() | list | max %}
+    {% for name, count in result.by_keyword.items() %}
+    <div class="breakdown-row">
+      <div class="b-name">{{ name }}</div>
+      <div class="b-bar"><div class="b-fill" style="width:{{ (count / max_k * 100)|int }}%"></div></div>
+      <div class="b-count">{{ count }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="pdf-footer-note">
+  Confidential · Generated by NOCTIV RadioMonitor · {{ result.generated_at.strftime("%d %b %Y %H:%M") }} UTC ·
+  This report is intended solely for the use of the named subscriber.
+</div>
+</body>
+</html>

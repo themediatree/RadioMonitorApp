@@ -1,0 +1,104 @@
+{% extends "base_app.html" %}
+{% block title %}Dashboard — NOCTIV{% endblock %}
+{% block topbar_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-eyebrow">Overview</div>
+<header class="page-header">
+  <h1>{{ "Welcome, " + (tenant_name or user.FullName or "Admin") }}</h1>
+  <a href="/register-commercial" class="btn btn-primary">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Register commercial
+  </a>
+</header>
+
+<!-- Stat cards -->
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-card-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-5"/><path d="M11 13l9-9"/></svg>
+    </div>
+    <div class="stat-card-label">Commercial detections</div>
+    <div class="stat-card-value">{{ commercial_count }}</div>
+    <div class="stat-card-sub">total airings detected</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+    </div>
+    <div class="stat-card-label">Songs identified</div>
+    <div class="stat-card-value">{{ song_count }}</div>
+    <div class="stat-card-sub">across all stations</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    </div>
+    <div class="stat-card-label">Keyword mentions</div>
+    <div class="stat-card-value">{{ word_count }}</div>
+    <div class="stat-card-sub">words & phrases detected</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    </div>
+    <div class="stat-card-label">Active commercials</div>
+    <div class="stat-card-value">{{ commercial_registered }}</div>
+    <div class="stat-card-sub">registered & monitoring</div>
+  </div>
+</div>
+
+<!-- Recent detections -->
+<div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+    <h2 style="font-family:var(--display);font-size:1rem;font-weight:700;color:var(--white)">Recent commercial detections</h2>
+    <a href="/detections" class="nav-link" style="font-size:0.78rem">View all →</a>
+  </div>
+  {% if recent_detections %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Commercial</th><th>Station</th><th>Aired date</th><th>Start time</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for item in recent_detections %}
+    {% set d = item.detection %}
+    {% set a = item.aired %}
+    <tr>
+      <td><strong>{{ d.commercial.DisplayTapeID if d.commercial else "—" }}</strong></td>
+      <td class="muted">{{ d.StationID }}</td>
+      <td class="muted">{{ a.aired_date or "—" }}</td>
+      <td class="muted">{{ a.start_clock or "—" }}</td>
+      <td><a href="/detections/{{ d.DetectionID }}" class="nav-link">View</a></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="placeholder">
+    <p>No detections yet.</p>
+    <a href="/register-commercial" class="btn btn-primary" style="margin-top:1rem">Register your first commercial</a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Admin section -->
+{% if user.user_type.value == "internal" or user.user_type.is_admin_tier %}
+<div class="card" style="margin-top:1rem">
+  <div style="margin-bottom:1rem">
+    <h2 style="font-family:var(--display);font-size:1rem;font-weight:700;color:var(--white)">Admin actions</h2>
+  </div>
+  <div style="display:flex;gap:0.6rem;flex-wrap:wrap">
+    {% if user.user_type.value == "internal" %}
+    <a href="/admin/subscribers" class="btn btn-ghost btn-sm">Subscribers</a>
+    <a href="/admin/invitations" class="btn btn-ghost btn-sm">Invitations</a>
+    <a href="/admin/tokens" class="btn btn-ghost btn-sm">Token accounts</a>
+    {% endif %}
+    <a href="/register-commercial" class="btn btn-ghost btn-sm">Register commercial</a>
+    <a href="/songs/subscribe" class="btn btn-ghost btn-sm">Subscribe to song</a>
+    <a href="/words/subscribe" class="btn btn-ghost btn-sm">Subscribe to keyword</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

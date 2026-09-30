@@ -1,0 +1,267 @@
+{% extends "base_app.html" %}
+{% block title %}Detections — RadioMonitor{% endblock %}
+{% block scripts %}
+<script>
+function toggleOosPanel() {
+  var panel = document.getElementById('oos-panel');
+  if (!panel) return;
+  panel.style.display = panel.style.display === 'none' ? '' : 'none';
+}
+document.addEventListener('DOMContentLoaded', function() {
+  var panel = document.getElementById('oos-panel');
+  if (panel) panel.style.display = 'none';
+});
+
+/* ── OOS accept helpers ── */
+function getCheckedIds() {
+  return Array.from(document.querySelectorAll('.oos-check:checked'))
+              .map(function(cb) { return parseInt(cb.value); });
+}
+
+function toggleAllOos(masterCb) {
+  document.querySelectorAll('.oos-check').forEach(function(cb) {
+    cb.checked = masterCb.checked;
+  });
+}
+
+async function acceptSelected() {
+  var ids = getCheckedIds();
+  if (!ids.length) { alert('Please select at least one detection.'); return; }
+  await doAccept(ids);
+}
+
+async function acceptAll() {
+  var ids = Array.from(document.querySelectorAll('.oos-check'))
+                 .map(function(cb) { return parseInt(cb.value); });
+  await doAccept(ids);
+}
+
+async function doAccept(ids) {
+  var btn = document.getElementById('accept-all-btn');
+  var btnSel = document.getElementById('accept-sel-btn');
+  if (btn) btn.disabled = true;
+  if (btnSel) btnSel.disabled = true;
+
+  try {
+    var resp = await fetch('/detections/accept-bulk-async', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({detection_ids: ids})
+    });
+    var data = await resp.json();
+    if (data.ok) {
+      // Remove accepted rows from OOS panel
+      data.accepted.forEach(function(id) {
+        var row = document.querySelector('.oos-row[data-id="' + id + '"]');
+        if (row) row.remove();
+        // Update badge in main table
+        var badge = document.querySelector('.oos-badge[data-id="' + id + '"]');
+        if (badge) badge.style.display = 'none';
+        // Show accepted badge
+        var accBadge = document.querySelector('.oos-accepted-badge[data-id="' + id + '"]');
+        if (accBadge) accBadge.style.display = '';
+      });
+      // Update count
+      var remaining = document.querySelectorAll('.oos-row').length;
+      var countEl = document.getElementById('oos-count');
+      if (countEl) countEl.textContent = remaining;
+      var banner = document.getElementById('oos-banner');
+      if (banner && remaining === 0) banner.style.display = 'none';
+      var panel = document.getElementById('oos-panel');
+      if (panel && remaining === 0) panel.style.display = 'none';
+
+      // Show debit summary
+      if (data.credits_debited > 0) {
+        var msg = data.credits_debited + ' credit' + (data.credits_debited !== 1 ? 's' : '') + ' debited.';
+        var note = document.getElementById('oos-debit-note');
+        if (note) { note.textContent = msg; note.style.display = ''; }
+      }
+    } else {
+      alert('Error accepting detections. Please try again.');
+    }
+  } catch(e) {
+    alert('Network error. Please try again.');
+  } finally {
+    if (btn) btn.disabled = false;
+    if (btnSel) btnSel.disabled = false;
+  }
+}
+</script>
+{% endblock %}
+{% block topbar_title %}Detections{% endblock %}
+{% block content %}
+    <div class="page-eyebrow">Commercials</div>
+    <header class="page-header">
+        <h1>Commercial detections</h1>
+        <p class="muted">Proof of broadcast for commercials you can see.</p>
+    </header>
+
+    {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+    <form method="get" action="/detections" class="filter-bar" id="det-filter">
+        <label class="form-field">
+            <span class="form-label">Station</span>
+            <select name="station_id" class="form-input" onchange="this.form.submit()">
+                <option value="">All stations</option>
+                {% for s in stations %}
+                <option value="{{ s.StationID }}" {% if filters.station_id == (s.StationID|string) %}selected{% endif %}>{{ s.StationName }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="form-field">
+            <span class="form-label">Commercial (Tape ID)</span>
+            <input name="commercial" class="form-input" placeholder="Search…" value="{{ filters.commercial }}">
+        </label>
+        <label class="form-field">
+            <span class="form-label">Brand</span>
+            <input name="brand" class="form-input" placeholder="Search…" value="{{ filters.brand }}">
+        </label>
+        <label class="form-field">
+            <span class="form-label">Campaign</span>
+            <input name="campaign" class="form-input" placeholder="Search…" value="{{ filters.campaign }}">
+        </label>
+        <label class="form-field">
+            <span class="form-label">From</span>
+            <input type="date" name="date_from" class="form-input" value="{{ filters.date_from }}">
+        </label>
+        <label class="form-field">
+            <span class="form-label">To</span>
+            <input type="date" name="date_to" class="form-input" value="{{ filters.date_to }}">
+        </label>
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-primary">Apply</button>
+            <a href="/detections" class="btn btn-ghost">Clear</a>
+        </div>
+    </form>
+
+    <p class="muted small">{{ total }} airing{{ "" if total == 1 else "s" }}{% if total > 0 %} — page {{ page }} of {{ total_pages }}{% endif %}.</p>
+
+    {% if out_of_schedule_count is defined and out_of_schedule_count > 0 %}
+    <div id="oos-banner" style="display:flex;align-items:center;justify-content:space-between;padding:0.65rem 1rem;background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.25);border-radius:8px;margin-bottom:0.75rem">
+      <span style="font-size:0.82rem;color:#fb923c">
+        <strong id="oos-count">{{ out_of_schedule_count }}</strong> instance{{ 's' if out_of_schedule_count != 1 else '' }} detected outside your registered spot times
+      </span>
+      <button type="button" onclick="toggleOosPanel()" class="btn btn-ghost btn-sm" style="color:#fb923c;border-color:rgba(251,146,60,0.3);font-size:0.75rem">VIEW</button>
+    </div>
+
+    <!-- OOS right panel -->
+    <div id="oos-panel" style="display:none;border:1px solid rgba(251,146,60,0.3);border-radius:8px;padding:1rem;margin-bottom:1rem;background:rgba(251,146,60,0.04)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+        <strong style="font-size:0.9rem;color:#fb923c">Out of spot detections</strong>
+        <button type="button" onclick="toggleOosPanel()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem">✕</button>
+      </div>
+      <p class="muted small" style="margin-bottom:0.75rem">These detections aired outside your registered spot times. Select individual detections or use <em>Include All</em> to accept them into your main detection list. Billing applies.</p>
+
+      <div id="oos-debit-note" style="display:none;font-size:0.8rem;color:#22c55e;margin-bottom:0.5rem"></div>
+
+      <div class="table-scroll">
+      <table class="data-table" style="font-size:0.82rem">
+        <thead>
+          <tr>
+            <th style="width:32px"><input type="checkbox" onchange="toggleAllOos(this)" title="Select all"></th>
+            <th>Aired</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Station</th>
+            <th>Commercial</th>
+            <th>Campaign</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for item in oos_rows %}
+        {% set d = item.detection %}
+        {% set a = item.aired %}
+        <tr class="oos-row" data-id="{{ d.DetectionID }}">
+          <td><input type="checkbox" class="oos-check" value="{{ d.DetectionID }}"></td>
+          <td class="mono muted">{{ a.aired_date or "—" }}</td>
+          <td class="mono">{{ a.start_clock or "—" }}</td>
+          <td class="mono muted">{{ a.end_clock or "—" }}</td>
+          <td>{{ station_map.get(d.StationID, d.StationID) }}</td>
+          <td>{{ d.commercial.DisplayTapeID if d.commercial else "—" }}</td>
+          <td class="muted">{{ d.campaign.Name if d.campaign else "—" }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+
+      <div style="display:flex;gap:0.75rem;margin-top:0.75rem;flex-wrap:wrap">
+        <button id="accept-sel-btn" type="button" onclick="acceptSelected()" class="btn btn-ghost btn-sm" style="color:#fb923c;border-color:rgba(251,146,60,0.4)">
+          UPDATE / INCLUDE selected
+        </button>
+        <button id="accept-all-btn" type="button" onclick="acceptAll()" class="btn btn-primary btn-sm" style="background:#fb923c;border-color:#fb923c">
+          UPDATE / INCLUDE ALL
+        </button>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if rows %}
+    <div class="table-scroll"><table class="data-table">
+        <thead>
+            <tr>
+                <th>Aired</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Station</th>
+                <th>Commercial</th>
+                <th>Brand</th>
+                <th>Campaign</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for item in rows %}
+        {% set d = item.detection %}
+        {% set a = item.aired %}
+        {% set in_schedule = schedule_flags.get(d.DetectionID, true) %}
+        {% set is_accepted = d.IsAccepted %}
+        {# Show row if in-schedule OR if out-of-schedule but accepted #}
+        {% if in_schedule or is_accepted %}
+            <tr {% if not in_schedule %}style="background:rgba(251,146,60,0.06)"{% endif %}>
+                <td>
+                  {{ a.aired_date or "—" }}
+                  {% if not in_schedule %}
+                  <div style="margin-top:3px">
+                    <span class="oos-badge" data-id="{{ d.DetectionID }}" style="font-size:0.62rem;font-weight:600;padding:1px 5px;border-radius:3px;background:rgba(251,146,60,0.15);color:#fb923c;border:1px solid rgba(251,146,60,0.3)">Out of spot</span>
+                    <span class="oos-accepted-badge" data-id="{{ d.DetectionID }}" style="display:none;font-size:0.62rem;font-weight:600;padding:1px 5px;border-radius:3px;background:rgba(34,197,94,0.12);color:#22c55e;border:1px solid rgba(34,197,94,0.3)">Accepted</span>
+                  </div>
+                  {% endif %}
+                </td>
+                <td>
+                  {{ a.start_clock or "—" }}
+                  {% if not in_schedule and schedule_summary_map is defined and schedule_summary_map.get(d.DetectionID) %}
+                  <div style="font-size:0.68rem;color:#fb923c;margin-top:2px;font-family:var(--mono)">{{ schedule_summary_map[d.DetectionID]["from_t"] }}</div>
+                  {% endif %}
+                </td>
+                <td>
+                  {{ a.end_clock or "—" }}
+                  {% if not in_schedule and schedule_summary_map is defined and schedule_summary_map.get(d.DetectionID) %}
+                  <div style="font-size:0.68rem;color:#fb923c;margin-top:2px;font-family:var(--mono)">{{ schedule_summary_map[d.DetectionID]["to_t"] }}</div>
+                  {% endif %}
+                </td>
+                <td>{{ station_map.get(d.StationID, d.StationID) }}</td>
+                <td>{{ d.commercial.DisplayTapeID if d.commercial else "—" }}</td>
+                <td class="muted">{{ d.commercial.Brand if d.commercial and d.commercial.Brand else "—" }}</td>
+                <td class="muted">{{ d.campaign.Name if d.campaign else "—" }}</td>
+                <td><a href="/detections/{{ d.DetectionID }}" class="nav-link">Details</a></td>
+            </tr>
+        {% endif %}
+        {% endfor %}
+        </tbody>
+    </table></div>
+
+    {% if total_pages > 1 %}
+    <nav class="pagination">
+        {% set qs %}station_id={{ filters.station_id }}&commercial={{ filters.commercial }}&brand={{ filters.brand }}&campaign={{ filters.campaign }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}{% endset %}
+        {% if page > 1 %}<a href="/detections?{{ qs }}&page={{ page - 1 }}" class="btn btn-ghost">‹ Previous</a>{% endif %}
+        <span class="muted small">Page {{ page }} of {{ total_pages }}</span>
+        {% if page < total_pages %}<a href="/detections?{{ qs }}&page={{ page + 1 }}" class="btn btn-ghost">Next ›</a>{% endif %}
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="card placeholder">
+        <p class="muted">No airings match your filters yet.</p>
+    </div>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends "base_app.html" %}
+{% block title %}Team — NOCTIV{% endblock %}
+{% block topbar_title %}Team{% endblock %}
+{% block content %}
+<div class="page-eyebrow">Account</div>
+<header class="page-header">
+    <h1>Team members</h1>
+    <a href="/admin/invitations/new" class="btn btn-primary">Invite a user</a>
+</header>
+<p class="muted small" style="margin-bottom:1.25rem">Manage which stations each user can access, and whether they can download clips or export reports. New users have full access until you restrict them.</p>
+
+{% if members %}
+<div class="table-scroll"><table class="data-table">
+    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Station access</th><th>Downloads</th><th></th></tr></thead>
+    <tbody>
+    {% for m in members %}
+    <tr>
+        <td><strong>{{ m.FullName or "—" }}</strong></td>
+        <td class="muted">{{ m.Email }}</td>
+        <td>
+            {% if m.user_type.value == "subscriber_admin" %}
+                <span class="badge badge-active">Admin</span>
+            {% else %}
+                <span class="badge badge-pending">User</span>
+            {% endif %}
+        </td>
+        <td>
+            {% if m.IsActive %}
+                <span class="badge badge-active">Active</span>
+            {% else %}
+                <span class="badge badge-withdrawn">Inactive</span>
+            {% endif %}
+        </td>
+        <td class="muted">
+            {% if m.user_type.value == "subscriber_admin" %}
+                All stations
+            {% elif m.HasStationRestrictions %}
+                Restricted
+            {% else %}
+                All stations
+            {% endif %}
+        </td>
+        <td class="muted">
+            {% if m.user_type.value == "subscriber_admin" or m.CanDownload %}
+                <span class="badge badge-active">Allowed</span>
+            {% else %}
+                <span class="badge badge-withdrawn">Blocked</span>
+            {% endif %}
+        </td>
+        <td>
+            {% if m.user_type.value == "subscriber_user" %}
+            <a href="/account/team/{{ m.UserID }}/permissions" class="nav-link">Manage</a>
+            {% else %}
+            <span class="muted small">—</span>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table></div>
+{% else %}
+<div class="card placeholder">
+    <p>No team members yet. <a href="/admin/invitations/new" class="nav-link">Invite your first user</a>.</p>
+</div>
+{% endif %}
+{% endblock %}

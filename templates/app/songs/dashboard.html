@@ -1,0 +1,59 @@
+{% extends "base_app.html" %}
+{% block title %}Song Detection — RadioMonitor
+{% endblock %}
+{% block topbar_title %}Song Detection{% endblock %}
+{% block content %}
+    <div class="page-eyebrow">Songs</div>
+    <header class="page-header">
+        <h1>Song detection</h1>
+        <div style="display:flex;gap:var(--space-2)">
+            <a href="/songs/subscribe" class="btn btn-primary">Subscribe to song</a>
+            <a href="/songs/detections" class="btn btn-ghost">All detections</a>
+        </div>
+    </header>
+
+    {% if retro_job %}
+    <div class="alert alert-success">Subscription created. A retrospective search (job #{{ retro_job }}) has been automatically submitted to cover past airings — results will appear in your detections shortly.</div>
+    {% endif %}
+
+    <section>
+        <h2>Active subscriptions</h2>
+        {% if subscriptions %}
+        <div class="table-scroll"><table class="data-table">
+            <thead><tr><th>Song</th><th>Artist</th><th>Stations</th><th>From</th><th>To</th><th>Status</th><th>Source</th><th></th></tr></thead>
+            <tbody>
+            {% for s in subscriptions %}
+            {% set expired = s.EndDate and s.EndDate < today %}
+            <tr>
+                <td><strong>{{ s.Title or s.TargetValue }}</strong></td>
+                <td class="muted">{{ s.Artist or "—" }}</td>
+                <td class="muted">{{ resolve_stations(s.StationFilter) }}</td>
+                <td class="muted">{{ s.StartDate }}</td>
+                <td class="muted">{{ s.EndDate or "Open" }}</td>
+                <td>
+                    {% if expired %}
+                        <span class="badge badge-completed">completed</span>
+                    {% elif s.Status == "withdrawn" %}
+                        <span class="badge badge-withdrawn">withdrawn</span>
+                    {% else %}
+                        <span class="badge badge-active">active</span>
+                    {% endif %}
+                </td>
+                <td><span class="badge badge-{{ 'pending' if s.Source == 'api' else 'active' }}">{{ s.Source or 'app' }}</span></td>
+                <td>
+                    {% if s.Status == "active" and not expired %}\n                    <form method="post" action="/songs/subscribe/{{ s.SubscriptionID }}/withdraw"
+                          onsubmit="return confirm('Withdraw this song subscription?')">
+                        <button type="submit" class="btn btn-ghost btn-sm">Withdraw</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table></div>
+        {% else %}
+        <div class="card placeholder"><p class="muted">No subscriptions yet. <a href="/songs/subscribe">Subscribe to song</a> to start monitoring.</p></div>
+        {% endif %}
+    </section>
+
+{% endblock %}

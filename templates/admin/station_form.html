@@ -1,0 +1,74 @@
+{% extends "base_app.html" %}
+{% block title %}{{ 'Edit' if account else 'New' }} station account — RadioMonitor{% endblock %}
+{% block topbar_title %}{{ 'Edit' if account else 'New' }} station account{% endblock %}
+{% block content %}
+<section class="auth-section"><div class="auth-card auth-card-wide">
+    <h1>{{ 'Edit station account' if account else 'New station account' }}</h1>
+    {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
+
+    {% set action = '/admin/stations/' ~ account.StationAccountID if account else '/admin/stations' %}
+    <form method="post" action="{{ action }}" class="form-stack">
+        {% if account %}
+        <label class="form-field">
+            <span class="form-label">Station</span>
+            <input type="text" class="form-input" value="{{ station.StationName }}" disabled>
+            <span class="form-hint muted">The station cannot be changed after the account is created.</span>
+        </label>
+        {% else %}
+        <label class="form-field">
+            <span class="form-label">Station</span>
+            {% if available_stations %}
+            <select name="station_id" class="form-input" required>
+                <option value="" disabled selected>Select a station…</option>
+                {% for s in available_stations %}
+                <option value="{{ s.StationID }}"
+                    {% if form.station_id == (s.StationID | string) %}selected{% endif %}>
+                    {{ s.StationName }}
+                </option>
+                {% endfor %}
+            </select>
+            {% else %}
+            <p class="muted small">Every station already has an account. Add stations via the pipeline first.</p>
+            {% endif %}
+        </label>
+        {% endif %}
+
+        <label class="form-field">
+            <span class="form-label">Subscription plan</span>
+            <select name="plan" class="form-input" required>
+                <option value="" disabled {% if not account and not form.plan %}selected{% endif %}>Select a plan…</option>
+                {% for p in plans %}
+                <option value="{{ p.PlanCode }}"
+                    {% if (account and account.SubscriptionPlan == p.PlanCode) or form.plan == p.PlanCode %}selected{% endif %}>
+                    {{ p.DisplayName }}
+                </option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="form-field">
+            <span class="form-label">Status</span>
+            <select name="status" class="form-input" required>
+                {% for s in statuses %}
+                <option value="{{ s }}"
+                    {% if (account and account.AccountStatus == s) or form.status == s or (not account and not form.status and s == 'active') %}selected{% endif %}>
+                    {{ s.replace('_', ' ') }}
+                </option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="form-field">
+            <span class="form-label">Contact email <span class="muted small">(optional)</span></span>
+            <input type="email" name="contact_email" class="form-input"
+                   value="{{ account.ContactEmail or '' if account else (form.contact_email or '') }}">
+        </label>
+        <label class="form-field">
+            <span class="form-label">Contact phone <span class="muted small">(optional)</span></span>
+            <input type="text" name="contact_phone" class="form-input"
+                   value="{{ account.ContactPhone or '' if account else (form.contact_phone or '') }}">
+        </label>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">{{ 'Save changes' if account else 'Create account' }}</button>
+            <a href="/admin/stations" class="btn btn-ghost">Cancel</a>
+        </div>
+    </form>
+{% endblock %}

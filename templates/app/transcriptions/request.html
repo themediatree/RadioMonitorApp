@@ -1,0 +1,211 @@
+{% extends "base_app.html" %}
+{% from "macros/station_picker.html" import station_picker %}
+{% block title %}Request Transcription — NOCTIV{% endblock %}
+{% block topbar_title %}Request Transcription{% endblock %}
+{% block content %}
+<div class="page-eyebrow">Transcriptions</div>
+<header class="page-header">
+  <h1>Request transcription</h1>
+  <a href="/transcriptions" class="nav-link">← Back to transcriptions</a>
+</header>
+<p class="muted small" style="margin-bottom:1.25rem">Search the transcription archive by station and date/time range. Results are returned from the pipeline's existing transcription database — no reprocessing needed.</p>
+
+{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+<div class="card form-card">
+  <form method="post" action="/transcriptions/request">
+    <div class="form-field">
+      <span class="form-label">Stations</span>
+      {{ station_picker(stations, selected_ids=(form.station_ids or []), field_id="transcript-stations") }}
+    </div>
+
+    <div class="form-field">
+      <span class="form-label">Search keyword <span class="muted">(optional)</span></span>
+      <input name="search" class="form-input" placeholder="e.g. government, Pick n Pay…" value="{{ form.search or '' }}">
+    </div>
+
+    <div class="form-row">
+      <div class="form-field">
+        <span class="form-label">Date from</span>
+        <input type="date" name="date_from" class="form-input" required value="{{ form.date_from or '' }}">
+      </div>
+      <div class="form-field">
+        <span class="form-label">Date to</span>
+        <input type="date" name="date_to" class="form-input" required value="{{ form.date_to or '' }}">
+      </div>
+    </div>
+    <div class="form-field">
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem">
+        <span class="form-label" style="margin:0">Broadcast schedule</span>
+        <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.8rem;color:var(--muted)">
+          <input type="checkbox" id="enable-schedule" onchange="toggleSchedule(this.checked)"
+                 style="accent-color:var(--cobalt)">
+          Restrict to specific broadcast hours (optional)
+        </label>
+      </div>
+      <div id="schedule-wrap" style="display:none">
+        <div id="all-days-wrap" style="display:none;margin-bottom:0.5rem">
+          <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.8rem;color:var(--muted)">
+            <input type="checkbox" id="all-days" onchange="toggleAllDays(this.checked)" style="accent-color:var(--cobalt)">
+            Same time windows for all days in range
+          </label>
+        </div>
+        <div id="schedule-hint-single" class="form-hint" style="margin-bottom:0.5rem;display:none">
+          Day locked to match your selected date. Add time windows below.
+        </div>
+        <div id="schedule-hint-multi" class="form-hint" style="margin-bottom:0.5rem;display:none">
+          Add one row per day to include — days without a row are excluded.<br>
+          Multiple rows on the same day = multiple time windows that day.
+        </div>
+        <div id="schedule-rows"></div>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="addScheduleRow()"
+                style="margin-top:0.5rem">+ Add time window</button>
+      </div>
+    </div>
+
+    <div class="form-field">
+      <span class="form-label">Output format</span>
+      <div style="display:flex;gap:1.5rem;margin-top:0.25rem">
+        <label class="checkbox-label">
+          <input type="radio" name="output_format" value="chunks"
+                 {{ 'checked' if not form.output_format or form.output_format == 'chunks' }}>
+          Individual chunks (1-min files, audio playback available)
+        </label>
+        <label class="checkbox-label">
+          <input type="radio" name="output_format" value="concatenated"
+                 {{ 'checked' if form.output_format == 'concatenated' }}>
+          Concatenated transcript (merged, no audio playback)
+        </label>
+      </div>
+    </div>
+
+    <div class="card" id="cost-preview" style="background:rgba(26,79,168,0.08);border:1px solid rgba(26,79,168,0.2);margin-bottom:var(--space-3);display:none">
+      <p class="muted small" style="margin:0">
+        <strong>Estimated cost:</strong>
+        <span id="cost-value">—</span> credits per station
+        &nbsp;·&nbsp;
+        <span id="cost-currency" data-zar="" data-usd="" style="font-weight:600;color:var(--white)"></span>
+        <span id="cost-breakdown" class="muted" style="font-size:0.85em"></span>
+      </p>
+      <p class="muted small" style="margin-top:4px">
+        Your credit balance: <strong>{{ "%g"|format(token_balance|default(0)|float) }}</strong> credits
+        — <span data-zar="{{ rp_balance_zar|default('') }}" data-usd="{{ rp_balance_usd|default('') }}">{{ rp_balance_zar|default('') }}</span>
+      </p>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Request transcription</button>
+      <a href="/transcriptions" class="btn btn-ghost">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+window.recalcCost = function() {
+  var startVal = document.querySelector("[name=date_from]") ? document.querySelector("[name=date_from]").value : "";
+  var endVal   = document.querySelector("[name=date_to]")   ? document.querySelector("[name=date_to]").value   : "";
+  if (!startVal || !endVal) { document.getElementById("cost-preview").style.display="none"; return; }
+  var days = Math.max(1, Math.round((new Date(endVal) - new Date(startVal)) / 86400000) + 1);
+  var schedHours = getScheduledHours();
+  var hoursPerDay = (schedHours !== null && schedHours > 0) ? schedHours : 24;
+  var cost = days * hoursPerDay;
+  var zarPerToken = {{ rp_zar_per_token|default(3.60) }};
+  var fxRate = {{ rp_fx_rate|default(18.50) }};
+  var zarTotal = (cost * zarPerToken).toFixed(2);
+  var usdTotal = (cost * zarPerToken / fxRate).toFixed(2);
+  var zarFmt = "R " + parseFloat(zarTotal).toLocaleString("en-ZA", {minimumFractionDigits:2});
+  var usdFmt = "$ " + parseFloat(usdTotal).toLocaleString("en-US", {minimumFractionDigits:2});
+  var currEl = document.getElementById("cost-currency");
+  currEl.dataset.zar = zarFmt; currEl.dataset.usd = usdFmt;
+  var activeCur = (document.cookie.split(';').map(function(c){return c.trim();}).filter(function(c){return c.startsWith('currency=');})[0]||'currency=ZAR').split('=')[1];
+  currEl.textContent = activeCur === 'USD' ? usdFmt : zarFmt;
+  document.getElementById("cost-value").textContent = cost.toLocaleString("en-ZA");
+  var schedLabel = (schedHours !== null && schedHours > 0) ? " x " + hoursPerDay.toFixed(1) + "h/day scheduled" : " x 24h/day";
+  document.getElementById("cost-breakdown").textContent = " (" + days + " day" + (days===1?"":"s") + schedLabel + " x 1 station)";
+  document.getElementById("cost-preview").style.display = "";
+};
+["date_from","date_to"].forEach(function(n){
+  var el = document.querySelector("[name="+n+"]");
+  if(el) el.addEventListener("change", window.recalcCost);
+});
+
+function getScheduledHours(){
+  if(!document.getElementById("enable-schedule")||!document.getElementById("enable-schedule").checked) return null;
+  var rows=document.querySelectorAll(".schedule-row");
+  var t=0;
+  rows.forEach(function(r){
+    var f=r.querySelector("[name=schedule_from]").value;
+    var e=r.querySelector("[name=schedule_to]").value;
+    if(f&&e&&e>f){var fm=parseInt(f.split(":")[0])*60+parseInt(f.split(":")[1]);var tm=parseInt(e.split(":")[0])*60+parseInt(e.split(":")[1]);t+=(tm-fm)/60;}
+  });
+  return t;
+}
+var DAY_NAMES=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+function toggleSchedule(e){
+  document.getElementById("schedule-wrap").style.display=e?"":"none";
+  if(e){ updateScheduleHints(); if(!document.getElementById("schedule-rows").children.length) addScheduleRow(); }
+  else { document.getElementById("schedule-rows").innerHTML=""; }
+  window.recalcCost();
+}
+var DAY_NAMES=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+
+function getDateInfo() {
+  var df = document.querySelector("[name=date_from]") ? document.querySelector("[name=date_from]").value : "";
+  var dt = document.querySelector("[name=date_to]")   ? document.querySelector("[name=date_to]").value   : "";
+  var single = df && dt && df === dt;
+  var lockedDow = -1;
+  if (single && df) { var d = new Date(df+"T00:00:00"); lockedDow = (d.getDay()+6)%7; }
+  return { single: single, lockedDow: lockedDow };
+}
+function isAllDays() { var cb = document.getElementById("all-days"); return cb && cb.checked; }
+function toggleAllDays(checked){ document.getElementById("schedule-rows").innerHTML=""; addScheduleRow(); window.recalcCost(); }
+function updateScheduleHints() {
+  var info = getDateInfo();
+  var aw = document.getElementById("all-days-wrap");
+  if(aw) aw.style.display = info.single ? "none" : "";
+  var hs = document.getElementById("schedule-hint-single");
+  var hm = document.getElementById("schedule-hint-multi");
+  if(hs) hs.style.display = info.single ? "" : "none";
+  if(hm) hm.style.display = info.single ? "none" : "";
+}
+function addScheduleRow(){
+  var info = getDateInfo();
+  var allDays = isAllDays();
+  var w=document.getElementById("schedule-rows");
+  var r=document.createElement("div");
+  r.className="schedule-row";
+  r.style.cssText="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.4rem;flex-wrap:wrap";
+  if(allDays){
+    r.innerHTML='<input type="hidden" name="schedule_day" value="-1">'
+      +'<input type="time" name="schedule_from" class="form-input" style="flex:0 0 110px;font-size:0.82rem" value="06:00" onchange="window.recalcCost()">'
+      +'<span style="color:var(--muted);font-size:0.82rem">to</span>'
+      +'<input type="time" name="schedule_to" class="form-input" style="flex:0 0 110px;font-size:0.82rem" value="09:00" onchange="window.recalcCost()">'
+      +'<button type="button" onclick="this.parentElement.remove();window.recalcCost();" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:0 4px">&#x2715;</button>';
+  } else if(info.single && info.lockedDow >= 0){
+    // Single day: use hidden input so disabled field still submits
+    r.innerHTML='<input type="hidden" name="schedule_day" value="'+info.lockedDow+'">'
+      +'<span class="form-hint" style="flex:0 0 130px;font-size:0.8rem;color:var(--muted)">'+DAY_NAMES[info.lockedDow]+'</span>'
+      +'<input type="time" name="schedule_from" class="form-input" style="flex:0 0 110px;font-size:0.82rem" value="06:00" onchange="window.recalcCost()">'
+      +'<span style="color:var(--muted);font-size:0.82rem">to</span>'
+      +'<input type="time" name="schedule_to" class="form-input" style="flex:0 0 110px;font-size:0.82rem" value="09:00" onchange="window.recalcCost()">'
+      +'<button type="button" onclick="this.parentElement.remove();window.recalcCost();" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:0 4px">&#x2715;</button>';
+  } else {
+    r.innerHTML='<select name="schedule_day" class="form-input" style="flex:0 0 130px;font-size:0.82rem" onchange="window.recalcCost()">'
+      +DAY_NAMES.map(function(d,i){return'<option value="'+i+'">'+d+'</option>';}).join('')
+      +'</select>'
+      +'<input type="time" name="schedule_from" class="form-input" style="flex:0 0 110px;font-size:0.82rem" value="06:00" onchange="window.recalcCost()">'
+      +'<span style="color:var(--muted);font-size:0.82rem">to</span>'
+      +'<input type="time" name="schedule_to" class="form-input" style="flex:0 0 110px;font-size:0.82rem" value="09:00" onchange="window.recalcCost()">'
+      +'<button type="button" onclick="this.parentElement.remove();window.recalcCost();" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:0 4px">&#x2715;</button>';
+  }
+  w.appendChild(r);
+  window.recalcCost();
+}
+["date_from","date_to"].forEach(function(n){
+  var el=document.querySelector("[name="+n+"]");
+  if(el) el.addEventListener("change",function(){ updateScheduleHints(); window.recalcCost(); });
+});
+var stEl=document.querySelector("[name=station_id]");
+if(stEl) stEl.addEventListener("change",window.recalcCost);
+</script>
+{% endblock %}

@@ -1,0 +1,1225 @@
+{% extends "base_app.html" %}
+{% block title %}Towers — NOCTIV RadioMonitor{% endblock %}
+{% block topbar_title %}FM Broadcast Tower Map{% endblock %}
+
+{% block content %}
+<style>
+.towers-layout {
+  display: flex; gap: 0; height: calc(100vh - 64px);
+  margin: -1.5rem; position: relative;
+}
+.tower-panel {
+  width: 320px; flex-shrink: 0;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.tower-panel-header {
+  padding: 1rem 1rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.tower-panel-title {
+  font-family: var(--display); font-size: 0.95rem;
+  font-weight: 700; color: var(--white); margin-bottom: 0.65rem;
+}
+.view-toggle {
+  display: flex; background: var(--bg);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 3px; margin-bottom: 0.65rem; gap: 2px;
+}
+.view-btn {
+  flex: 1; padding: 5px 0; border: none; border-radius: 6px;
+  font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.06em;
+  cursor: pointer; transition: all 0.15s;
+  background: transparent; color: var(--muted);
+}
+.view-btn.active { background: var(--cobalt); color: #fff; box-shadow: 0 1px 4px rgba(45,107,228,0.4); }
+.tower-search {
+  width: 100%; background: var(--bg);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--pale); font-size: 0.8rem;
+  padding: 0.45rem 0.75rem; margin-bottom: 0.65rem;
+  outline: none; box-sizing: border-box;
+}
+.tower-search:focus { border-color: var(--cobalt); }
+.cat-filters { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.3rem; }
+.cat-counts  { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.3rem; margin-top: 0.25rem; }
+.cat-btn {
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.06em;
+  padding: 3px 10px; border-radius: 10px; border: 1px solid;
+  cursor: pointer; background: transparent;
+}
+.cat-all  { color: var(--glow); border-color: var(--glow); }
+.cat-all.active  { background: rgba(45,107,228,0.15); }
+.cat-pbs  { color: #cc4444; border-color: #cc4444; }
+.cat-pbs.active  { background: rgba(204,68,68,0.15); }
+.cat-cml  { color: #ffaa00; border-color: #ffaa00; }
+.cat-cml.active  { background: rgba(255,170,0,0.15); }
+.cat-cty  { color: #44cc44; border-color: #44cc44; }
+.cat-cty.active  { background: rgba(68,204,68,0.15); }
+.cat-lp   { color: #888888; border-color: #888888; }
+.cat-lp.active   { background: rgba(136,136,136,0.15); }
+.cat-count { font-family: var(--mono); font-size: 0.6rem; text-align: center; opacity: 0.75; display: block; }
+
+.tower-list { flex: 1; overflow-y: auto; padding: 0.5rem 0; }
+.tower-list::-webkit-scrollbar { width: 4px; }
+.tower-list::-webkit-scrollbar-thumb { background: rgba(74,142,255,0.2); border-radius: 2px; }
+
+.station-item {
+  display: flex; align-items: center; gap: 0.65rem;
+  padding: 0.5rem 1rem; cursor: pointer;
+  transition: background 0.12s;
+  border-bottom: 1px solid rgba(192,207,224,0.04);
+}
+.station-item:hover { background: rgba(74,142,255,0.06); }
+.station-item.plotted { background: rgba(45,107,228,0.22); border-left: 3px solid var(--cobalt); }
+
+/* Edit gear — internal users only */
+.edit-btn {
+  display: none; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 5px; flex-shrink: 0;
+  background: rgba(74,142,255,0.12); border: 1px solid rgba(74,142,255,0.2);
+  color: #4a8eff; cursor: pointer; font-size: 12px;
+  transition: background 0.15s;
+}
+.edit-btn:hover { background: rgba(74,142,255,0.25); }
+.station-item:hover .edit-btn { display: flex; }
+
+/* Edit modal */
+.edit-modal-backdrop {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6); z-index: 1000;
+  align-items: center; justify-content: center;
+}
+.edit-modal-backdrop.open { display: flex; }
+.edit-modal {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; width: 480px; max-width: 95vw;
+  max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+.edit-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.1rem 1.25rem; border-bottom: 1px solid var(--border);
+}
+.edit-modal-title {
+  font-family: var(--display); font-size: 0.95rem;
+  font-weight: 700; color: var(--white);
+}
+.edit-modal-close {
+  background: none; border: none; color: var(--muted);
+  font-size: 1.2rem; cursor: pointer; padding: 2px 6px; border-radius: 4px;
+}
+.edit-modal-close:hover { color: var(--white); background: rgba(255,255,255,0.08); }
+.edit-modal-body { padding: 1.25rem; }
+.edit-modal-footer {
+  display: flex; gap: 0.5rem; justify-content: flex-end;
+  padding: 0.85rem 1.25rem; border-top: 1px solid var(--border);
+}
+.edit-field { margin-bottom: 1rem; }
+.edit-field:last-child { margin-bottom: 0; }
+.edit-label {
+  font-family: var(--mono); font-size: 0.65rem;
+  color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 0.3rem; display: block;
+}
+.edit-input {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 7px; color: var(--pale); font-size: 0.82rem;
+  padding: 0.5rem 0.75rem; outline: none; box-sizing: border-box;
+}
+.edit-input:focus { border-color: var(--cobalt); }
+.edit-select { appearance: none; }
+.edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
+.edit-readonly {
+  font-family: var(--mono); font-size: 0.78rem; color: var(--muted);
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 7px; padding: 0.5rem 0.75rem;
+}
+.picker-row {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.55rem 0.75rem; cursor: pointer;
+  border-bottom: 1px solid rgba(192,207,224,0.06);
+  transition: background 0.12s;
+}
+.picker-row:last-child { border-bottom: none; }
+.picker-row:hover { background: rgba(74,142,255,0.08); }
+.picker-row.picker-selected { background: rgba(45,107,228,0.18); border-left: 3px solid var(--cobalt); }
+.picker-name { flex: 1; font-size: 0.82rem; font-weight: 600; color: var(--white); }
+.picker-freq { font-family: var(--mono); font-size: 0.68rem; color: var(--muted); }
+.edit-save-msg {
+  font-family: var(--mono); font-size: 0.72rem;
+  color: #4ade80; display: none; align-self: center;
+}
+
+.station-logo { width: 32px; height: 32px; border-radius: 6px; object-fit: contain; background: rgba(255,255,255,0.06); flex-shrink: 0; }
+.station-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.cat-pin      { width: 8px; height: 8px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.5); flex-shrink: 0; display: inline-block; }
+
+.station-info { flex: 1; min-width: 0; }
+.station-name { font-size: 0.82rem; font-weight: 600; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.station-sub  { font-family: var(--mono); font-size: 0.63rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 0.35rem; margin-top: 2px; }
+
+.count-badge { font-family: var(--mono); font-size: 0.58rem; background: rgba(74,142,255,0.12); color: #4a8eff; border-radius: 8px; padding: 1px 6px; flex-shrink: 0; }
+.tower-list-msg { padding: 1.5rem 1rem; text-align: center; font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
+.tower-panel-actions { padding: 0.65rem 1rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; flex-shrink: 0; align-items: center; }
+#plotted-count { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
+#tower-map { flex: 1; z-index: 0; border-left: 1px solid var(--border); }
+
+.map-stats { position: absolute; bottom: 1.5rem; left: 336px; display: flex; gap: 0.5rem; z-index: 400; pointer-events: none; }
+.map-stat-pill { background: rgba(11,17,32,0.82); border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px; font-family: var(--mono); font-size: 0.65rem; color: var(--pale); white-space: nowrap; backdrop-filter: blur(4px); }
+
+.leaflet-popup-content-wrapper { background: #1a2332 !important; border: 1px solid rgba(74,142,255,0.25) !important; border-radius: 8px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important; }
+.leaflet-popup-tip { background: #1a2332 !important; }
+.leaflet-popup-content { margin: 12px 14px !important; }
+.popup-name { font-family:'DM Sans',sans-serif; font-size:0.92rem; font-weight:700; color:#fff; margin-bottom:6px; }
+.popup-logo { width:40px; height:40px; border-radius:6px; object-fit:contain; background:rgba(255,255,255,0.08); margin-bottom:8px; display:block; }
+.popup-grid { display:grid; grid-template-columns:auto 1fr; gap:3px 10px; font-size:0.76rem; }
+.popup-label { color:#64748b; font-family:monospace; font-size:0.68rem; padding-top:1px; }
+.popup-value { color:#c0cfe0; }
+.popup-cat { display:inline-block; margin-top:7px; padding:2px 9px; border-radius:8px; font-family:monospace; font-size:0.65rem; font-weight:600; }
+.popup-stream { display:inline-block; margin-top:6px; padding:3px 10px; border-radius:6px; background:rgba(45,107,228,0.2); color:#4a8eff; font-size:0.72rem; text-decoration:none; }
+.popup-station-list { margin-top:8px; border-top:1px solid rgba(74,142,255,0.15); padding-top:8px; max-height:200px; overflow-y:auto; }
+.popup-station-link { display:flex; align-items:center; gap:6px; padding:3px 0; cursor:pointer; font-size:0.76rem; color:#c0cfe0; transition: color 0.12s; }
+.popup-station-link:hover { color:#4a8eff; }
+.popup-station-dot  { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.popup-station-logo { width:20px; height:20px; border-radius:3px; object-fit:contain; background:rgba(255,255,255,0.06); flex-shrink:0; }
+.popup-station-count { font-family:monospace; font-size:0.65rem; color:#64748b; margin-bottom:4px; }
+
+.station-label.leaflet-tooltip {
+  color: #ffffff !important; background: transparent !important;
+  border: none !important; box-shadow: none !important;
+  font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 700;
+  text-shadow: 0 1px 3px #000, 0 -1px 3px #000, 1px 0 3px #000, -1px 0 3px #000;
+  white-space: nowrap;
+}
+</style>
+
+<link rel="stylesheet" href="/static/css/leaflet.css"/>
+<script src="/static/js/leaflet.js"></script>
+<script src="/static/js/hls.min.js"></script>
+
+<div class="towers-layout">
+  <div class="tower-panel">
+    <div class="tower-panel-header">
+      <div class="tower-panel-title" id="panel-title">FM Radio Stations</div>
+      <div class="view-toggle">
+        <button class="view-btn active" id="btn-stations" onclick="switchView('stations')">📡 Stations</button>
+        {% if user.user_type.value == "internal" %}
+        <button class="view-btn" id="btn-towers" onclick="switchView('towers')">🗼 Towers</button>
+        {% endif %}
+      </div>
+      <input type="text" id="tower-search" class="tower-search" placeholder="Search station name…" autocomplete="off">
+      <div class="cat-filters">
+        <button class="cat-btn cat-all active" data-cat="">ALL</button>
+        <button class="cat-btn cat-pbs" data-cat="PBS">PBS</button>
+        <button class="cat-btn cat-cml" data-cat="CML">CML</button>
+        <button class="cat-btn cat-cty" data-cat="CTY">CTY</button>
+        <button class="cat-btn cat-lp"  data-cat="LP">LP</button>
+      </div>
+      <div class="cat-counts" id="cat-counts-row">
+        <span class="cat-count" data-cat="" style="color:var(--glow)">{{ total_programs }}</span>
+        <span class="cat-count" data-cat="PBS" style="color:#cc4444">{{ by_category.PBS }}</span>
+        <span class="cat-count" data-cat="CML" style="color:#ffaa00">{{ by_category.CML }}</span>
+        <span class="cat-count" data-cat="CTY" style="color:#44cc44">{{ by_category.CTY }}</span>
+        <span class="cat-count" data-cat="LP"  style="color:#888888">{{ by_category.LP }}</span>
+      </div>
+    </div>
+    <div class="tower-list" id="station-list">
+      <div class="tower-list-msg" id="list-msg">Loading…</div>
+    </div>
+    <div class="tower-panel-actions">
+      <button class="btn btn-ghost" id="clear-btn" style="flex:1;font-size:0.78rem" disabled>Clear Map</button>
+      <span id="plotted-count">0 plotted</span>
+      {% if user.user_type.value == "internal" %}
+      <button class="btn btn-primary" style="font-size:0.75rem;padding:5px 10px" onclick="openAddModal()">+ Add</button>
+      {% endif %}
+    </div>
+  </div>
+
+  <div id="tower-map"></div>
+
+  <div class="map-stats">
+    <div class="map-stat-pill"><b>{{ "{:,}".format(total_stations) }}</b> towers · <b>{{ total_programs }}</b> stations</div>
+    <div class="map-stat-pill" id="plotted-pill" style="display:none"><b id="plotted-pill-count">0</b> on map</div>
+  </div>
+</div>
+
+{% if user.user_type.value == "internal" %}
+
+<!-- MODAL 1: EDIT STATION -->
+<div class="edit-modal-backdrop" id="station-edit-backdrop">
+  <div class="edit-modal" style="width:500px">
+    <div class="edit-modal-header">
+      <div style="display:flex;align-items:center;gap:1rem;flex:1">
+        <div id="se-logo-wrap" style="display:none">
+          <img id="se-logo-img" src="" alt=""
+               style="width:48px;height:48px;border-radius:8px;object-fit:contain;background:rgba(255,255,255,0.06);border:1px solid var(--border)">
+        </div>
+        <div>
+          <div class="edit-modal-title" id="se-title">Edit Station</div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-top:2px">Select a tower to edit its specific fields</div>
+        </div>
+      </div>
+      <button class="edit-modal-close" onclick="closeModal('station-edit-backdrop')">✕</button>
+    </div>
+    <div class="edit-modal-body">
+      <input type="hidden" id="se-original-name">
+      <input type="hidden" id="se-selected-id">
+
+      <!-- Tower picker list -->
+      <div class="edit-field">
+        <label class="edit-label">Tower Locations</label>
+        <div id="se-tower-list" style="border:1px solid var(--border);border-radius:7px;overflow:hidden;max-height:160px;overflow-y:auto"></div>
+      </div>
+
+      <!-- Per-tower fields — shown after tower selected -->
+      <div id="se-per-tower" style="display:none">
+        <div style="font-family:var(--mono);font-size:0.62rem;color:var(--glow);letter-spacing:0.1em;text-transform:uppercase;margin:0.75rem 0 0.5rem">Selected Tower Fields</div>
+        <div class="edit-grid">
+          <div class="edit-field">
+            <label class="edit-label">Frequency (MHz)</label>
+            <input type="number" class="edit-input" id="se-freq" step="0.01" min="0">
+          </div>
+          <div class="edit-field">
+            <label class="edit-label">ERP (kW)</label>
+            <input type="number" class="edit-input" id="se-erp" step="0.001" min="0">
+          </div>
+        </div>
+        <div class="edit-grid">
+          <div class="edit-field">
+            <label class="edit-label">Unit IP</label>
+            <input type="text" class="edit-input" id="se-unit-ip" placeholder="10.0.0.x">
+          </div>
+          <div class="edit-field">
+            <label class="edit-label">Stream URL (this tower)</label>
+            <input type="url" class="edit-input" id="se-stream-url-tower" placeholder="https://…">
+          </div>
+        </div>
+      </div>
+
+      <!-- Shared fields — always visible -->
+      <div style="font-family:var(--mono);font-size:0.62rem;color:var(--cobalt);letter-spacing:0.1em;text-transform:uppercase;margin:0.75rem 0 0.5rem">Shared — Applies to ALL towers</div>
+      <div class="edit-field">
+        <label class="edit-label">Station Name</label>
+        <input type="text" class="edit-input" id="se-station-name" placeholder="e.g. 5FM">
+      </div>
+      <div class="edit-field">
+        <label class="edit-label">Category</label>
+        <select class="edit-input edit-select" id="se-category">
+          <option value="PBS">PBS — Public Broadcasting</option>
+          <option value="CML">CML — Commercial</option>
+          <option value="CTY">CTY — Community</option>
+          <option value="LP">LP — Low Power</option>
+          <option value="TRI">TRI — Trial</option>
+        </select>
+      </div>
+      <div class="edit-field">
+        <label class="edit-label">Default Stream URL (all towers)</label>
+        <input type="url" class="edit-input" id="se-stream-url" placeholder="https://…">
+      </div>
+      <div class="edit-field">
+        <label class="edit-label">Logo Filename</label>
+        <input type="text" class="edit-input" id="se-logo-path" placeholder="Rise_FM.png"
+               oninput="updateSeLogoPreview(this.value)">
+      </div>
+    </div>
+    <div class="edit-modal-footer">
+      <span class="edit-save-msg" id="se-save-msg">✓ Saved</span>
+      <button class="btn btn-ghost" onclick="deleteAllStationTowers()"
+              style="color:var(--red);border-color:rgba(220,38,38,0.3);margin-right:auto">
+        Delete Station
+      </button>
+      <button class="btn btn-ghost" onclick="closeModal('station-edit-backdrop')">Cancel</button>
+      <button class="btn btn-ghost" id="se-save-tower-btn" onclick="saveSelectedTower()" disabled
+              style="display:none">Save This Tower</button>
+      <button class="btn btn-primary" onclick="saveSharedFields()">Save All Towers</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 2: EDIT TOWER -->
+<div class="edit-modal-backdrop" id="tower-edit-backdrop">
+  <div class="edit-modal" style="width:500px">
+    <div class="edit-modal-header">
+      <div>
+        <div class="edit-modal-title" id="te-title">Edit Tower</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:2px">Select a station to edit its fields at this tower</div>
+      </div>
+      <button class="edit-modal-close" onclick="closeModal('tower-edit-backdrop')">✕</button>
+    </div>
+    <div class="edit-modal-body">
+      <input type="hidden" id="te-selected-id">
+
+      <!-- Tower info -->
+      <div class="edit-field">
+        <label class="edit-label">Tower Location</label>
+        <div class="edit-readonly" id="te-tower-name">—</div>
+      </div>
+      <div class="edit-grid">
+        <div class="edit-field">
+          <label class="edit-label">Province (read-only)</label>
+          <div class="edit-readonly" id="te-province">—</div>
+        </div>
+        <div></div>
+      </div>
+
+      <!-- Station list -->
+      <div class="edit-field">
+        <label class="edit-label">Stations at this Tower — select one to edit</label>
+        <div id="te-station-list" style="border:1px solid var(--border);border-radius:7px;overflow:hidden;max-height:160px;overflow-y:auto"></div>
+      </div>
+
+      <!-- Per-station fields — shown after station selected -->
+      <div id="te-per-station" style="display:none">
+        <div style="font-family:var(--mono);font-size:0.62rem;color:var(--glow);letter-spacing:0.1em;text-transform:uppercase;margin:0.75rem 0 0.5rem">Selected Station Fields</div>
+        <div class="edit-grid">
+          <div class="edit-field">
+            <label class="edit-label">Frequency (MHz)</label>
+            <input type="number" class="edit-input" id="te-freq" step="0.01" min="0">
+          </div>
+          <div class="edit-field">
+            <label class="edit-label">ERP (kW)</label>
+            <input type="number" class="edit-input" id="te-erp" step="0.001" min="0">
+          </div>
+        </div>
+        <div class="edit-grid">
+          <div class="edit-field">
+            <label class="edit-label">Unit IP</label>
+            <input type="text" class="edit-input" id="te-unit-ip" placeholder="10.0.0.x">
+          </div>
+          <div class="edit-field">
+            <label class="edit-label">Stream URL (this tower)</label>
+            <input type="url" class="edit-input" id="te-stream-url" placeholder="https://…">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="edit-modal-footer">
+      <span class="edit-save-msg" id="te-save-msg">✓ Saved</span>
+      <button class="btn btn-ghost" id="te-delete-btn" onclick="deleteSelectedTower()"
+              disabled style="color:var(--red);border-color:rgba(220,38,38,0.3);margin-right:auto">
+        Delete Tower
+      </button>
+      <button class="btn btn-ghost" onclick="closeModal('tower-edit-backdrop')">Cancel</button>
+      <button class="btn btn-primary" id="te-save-btn" onclick="saveTowerStationEdit()" disabled>Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 3: ADD NEW (tower or operational station) -->
+<div class="edit-modal-backdrop" id="add-modal-backdrop">
+  <div class="edit-modal" style="width:520px">
+    <div class="edit-modal-header">
+      <div class="edit-modal-title" id="add-modal-title">Add New</div>
+      <button class="edit-modal-close" onclick="closeModal('add-modal-backdrop')">✕</button>
+    </div>
+    <div class="edit-modal-body">
+
+      <!-- ADD TOWER FORM -->
+      <div id="add-tower-form">
+        <div class="edit-grid">
+          <div class="edit-field">
+            <label class="edit-label">Station Name *</label>
+            <input type="text" class="edit-input" id="at-station-name" placeholder="e.g. 5FM">
+          </div>
+          <div class="edit-field">
+            <label class="edit-label">Category *</label>
+            <select class="edit-input edit-select" id="at-category">
+              <option value="PBS">PBS — Public Broadcasting</option>
+              <option value="CML">CML — Commercial</option>
+              <option value="CTY">CTY — Community</option>
+              <option value="LP">LP — Low Power</option>
+              <option value="TRI">TRI — Trial</option>
+            </select>
+          </div>
+        </div>
+        <div class="edit-field">
+          <label class="edit-label">Tower Location *</label>
+          <input type="text" class="edit-input" id="at-tower" placeholder="e.g. JOHANNESBURG NORTH">
+        </div>
+        <div class="edit-grid">
+          <div class="edit-field">
+            <label class="edit-label">Latitude DMS *</label>
+            <input type="text" class="edit-input" id="at-lat-dms" placeholder="e.g. 26S00 00">
+          </div>
+          <div class="edit-field">
+            <label class="edit-label">Longitude DMS *</label>
+            <input type="text" class="edit-input" id="at-lon-dms" placeholder="e.g. 28E00 00">
+          </div>
+        </div>
+        <div class="edit-grid">
+          <div class="edit-field">
+            <label class="edit-label">Latitude Decimal *</label>
+            <input type="number" class="edit-input" id="at-lat" step="0.000001" placeholder="-26.000000">
+          </div>
+          <div class="edit-field">
+            <label class="edit-label">Longitude Decimal *</label>
+            <input type="number" class="edit-input" id="at-lon" step="0.000001" placeholder="28.000000">
+          </div>
+        </div>
+        <div class="edit-grid">
+          <div class="edit-field">
+            <label class="edit-label">Frequency (MHz) *</label>
+            <input type="number" class="edit-input" id="at-freq" step="0.01" min="0">
+          </div>
+          <div class="edit-field">
+            <label class="edit-label">ERP (kW) *</label>
+            <input type="number" class="edit-input" id="at-erp" step="0.001" min="0">
+          </div>
+        </div>
+        <div class="edit-grid">
+          <div class="edit-field">
+            <label class="edit-label">Province</label>
+            <input type="text" class="edit-input" id="at-province" placeholder="e.g. Gauteng">
+          </div>
+          <div class="edit-field">
+            <label class="edit-label">Polarisation</label>
+            <select class="edit-input edit-select" id="at-pol">
+              <option value="V">V — Vertical</option>
+              <option value="H">H — Horizontal</option>
+              <option value="C">C — Circular</option>
+            </select>
+          </div>
+        </div>
+        <div class="edit-field">
+          <label class="edit-label">Stream URL</label>
+          <input type="url" class="edit-input" id="at-stream-url" placeholder="https://…">
+        </div>
+        <div class="edit-grid">
+          <div class="edit-field">
+            <label class="edit-label">Logo Filename</label>
+            <input type="text" class="edit-input" id="at-logo-path" placeholder="Rise_FM.png">
+          </div>
+          <div class="edit-field">
+            <label class="edit-label">Status</label>
+            <select class="edit-input edit-select" id="at-status">
+              <option value="OPE">OPE — Operational</option>
+              <option value="LI">LI — Licensed</option>
+              <option value="SPA">SPA — Spare</option>
+            </select>
+          </div>
+        </div>
+        <div class="edit-grid">
+          <div class="edit-field">
+            <label class="edit-label">Unit IP</label>
+            <input type="text" class="edit-input" id="at-unit-ip" placeholder="10.0.0.x">
+          </div>
+          <div class="edit-field">
+            <label class="edit-label">On-Air Date</label>
+            <input type="date" class="edit-input" id="at-onair">
+          </div>
+        </div>
+      </div>
+
+      <!-- ADD OPERATIONAL STATION FORM -->
+      <div id="add-opstation-form" style="display:none">
+        <div style="background:rgba(45,107,228,0.08);border:1px solid rgba(45,107,228,0.2);border-radius:8px;padding:0.75rem;margin-bottom:1rem;font-size:0.8rem;color:var(--pale)">
+          This adds a station to the <strong>operational pipeline list</strong> (dbo.Station).
+          It will remain inactive until a monitoring service is registered on it.
+        </div>
+        <div class="edit-field">
+          <label class="edit-label">Station Name *</label>
+          <input type="text" class="edit-input" id="os-station-name" placeholder="e.g. HOT1027">
+        </div>
+        <div class="edit-field">
+          <label class="edit-label">Stream URL</label>
+          <input type="url" class="edit-input" id="os-stream-url" placeholder="https://…">
+        </div>
+      </div>
+
+    </div>
+    <div class="edit-modal-footer">
+      <span class="edit-save-msg" id="add-save-msg">✓ Added</span>
+      <button class="btn btn-ghost" onclick="closeModal('add-modal-backdrop')">Cancel</button>
+      <button class="btn btn-primary" id="add-submit-btn" onclick="submitAdd()">Add Record</button>
+    </div>
+  </div>
+</div>
+
+{% endif %}
+
+{% block scripts %}
+<script>
+var IS_INTERNAL = {{ 'true' if user.user_type.value == 'internal' else 'false' }};
+var currentView = 'stations';
+var plottedPrograms = new Set(), stationLayers = {};
+var plottedTowers = new Set(), towerLayers = {};
+var footprintLayers = {};
+var searchTimer, activecat = '', searchQ = '';
+
+map = L.map('tower-map', { center: [-29.0, 25.0], zoom: 6 });
+
+// HLS.js initialization on popup open (Leaflet strips <script> tags from popup HTML)
+map.on('popupopen', function(e) {
+  var marker = e.popup._source;
+  if (!marker || !marker._hlsAudioId) return;
+  var audioEl = document.getElementById(marker._hlsAudioId);
+  if (!audioEl) return;
+  if (window.Hls && Hls.isSupported()) {
+    var hls = new Hls({ enableWorker: false });
+    hls.loadSource(marker._hlsStreamSrc);
+    hls.attachMedia(audioEl);
+    marker._hlsInstance = hls;
+  } else if (audioEl.canPlayType('application/vnd.apple.mpegurl')) {
+    // Safari native HLS support
+    audioEl.src = marker._hlsStreamSrc;
+  }
+});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  subdomains: 'abc', maxZoom: 19,
+}).addTo(map);
+var st = document.createElement('style');
+st.innerHTML = '.leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }';
+document.head.appendChild(st);
+
+var PAGE_TOTAL = {{ total_programs }};
+
+function switchView(view) {
+  if (view === 'towers' && !IS_INTERNAL) return;
+  currentView = view; clearAll();
+  searchQ = ''; activecat = '';
+  document.getElementById('tower-search').value = '';
+  document.querySelectorAll('.cat-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelector('.cat-btn[data-cat=""]').classList.add('active');
+  updateCatCount('all', PAGE_TOTAL);
+  if (view === 'stations') {
+    document.getElementById('btn-stations').classList.add('active');
+    var tb = document.getElementById('btn-towers');
+    if (tb) tb.classList.remove('active');
+    document.getElementById('panel-title').textContent = 'FM Radio Stations';
+    document.getElementById('tower-search').placeholder = 'Search station name…';
+  } else {
+    var tb = document.getElementById('btn-towers');
+    if (tb) tb.classList.add('active');
+    document.getElementById('btn-stations').classList.remove('active');
+    document.getElementById('panel-title').textContent = 'Broadcast Towers';
+    document.getElementById('tower-search').placeholder = 'Search tower name…';
+  }
+  fetchList();
+}
+
+function fetchList() {
+  var params = new URLSearchParams({ limit: 300 });
+  if (searchQ)   params.set('q', searchQ);
+  if (activecat) params.set('cat', activecat);
+  document.getElementById('list-msg').textContent = 'Loading…';
+  document.getElementById('list-msg').style.display = 'block';
+  fetch((currentView === 'stations' ? '/api/map/stations' : '/api/map/towers') + '?' + params)
+    .then(function(r) { return r.json(); })
+    .then(currentView === 'stations' ? renderStationList : renderTowerList)
+    .catch(function() { document.getElementById('list-msg').textContent = 'Error loading.'; });
+}
+
+function renderStationList(stations) {
+  var list = document.getElementById('station-list');
+  list.querySelectorAll('.station-item').forEach(function(el) { el.remove(); });
+  if (!stations.length) {
+    document.getElementById('list-msg').textContent = 'No stations found';
+    document.getElementById('list-msg').style.display = 'block';
+    updateCatCount(activecat || 'all', 0); return;
+  }
+  document.getElementById('list-msg').style.display = 'none';
+  updateCatCount(activecat || 'all', stations.length);
+  stations.forEach(function(s) {
+    var div = document.createElement('div');
+    div.className = 'station-item' + (plottedPrograms.has(s.program) ? ' plotted' : '');
+    div.dataset.program = s.program;
+    var logoHtml = s.logo_url
+      ? '<img class="station-logo" src="' + escHtml(s.logo_url) + '" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'block\'">' +
+        '<div class="station-dot" style="background:' + s.color + ';display:none"></div>'
+      : '<div class="station-dot" style="background:' + s.color + '"></div>';
+    var badge = s.tower_count > 1 ? '<span class="count-badge">' + s.tower_count + ' towers</span>' : '';
+    var gearHtml = IS_INTERNAL
+      ? '<button class="edit-btn" title="Edit record" data-edit-program="' + escHtml(s.program) + '">⚙</button>'
+      : '';
+    div.innerHTML = logoHtml +
+      '<div class="station-info">' +
+        '<div class="station-name">' + escHtml(s.program) + '</div>' +
+        '<div class="station-sub"><span class="cat-pin" style="background:' + s.color + '"></span>' + s.freq + ' MHz' +
+        (s.has_stream ? '' : ' <span style="font-family:var(--mono);font-size:0.58rem;color:#f87171;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.2);border-radius:4px;padding:1px 5px">no audio</span>') +
+        '</div>' +
+      '</div>' + badge + gearHtml;
+    div.addEventListener('click', function() { toggleProgram(s.program); });
+    list.appendChild(div);
+    if (IS_INTERNAL) {
+      var gear = div.querySelector('.edit-btn');
+      if (gear) {
+        gear.addEventListener('click', function(e) {
+          e.stopImmediatePropagation();
+          e.stopPropagation();
+          e.preventDefault();
+          openEditByProgram(s.program);
+        });
+      }
+    }
+  });
+}
+
+function renderTowerList(towers) {
+  var list = document.getElementById('station-list');
+  list.querySelectorAll('.station-item').forEach(function(el) { el.remove(); });
+  if (!towers.length) {
+    document.getElementById('list-msg').textContent = 'No towers found';
+    document.getElementById('list-msg').style.display = 'block';
+    updateCatCount('all', 0); return;
+  }
+  document.getElementById('list-msg').style.display = 'none';
+  updateCatCount(activecat || 'all', towers.length);
+  towers.forEach(function(t) {
+    var div = document.createElement('div');
+    div.className = 'station-item' + (plottedTowers.has(t.name) ? ' plotted' : '');
+    div.dataset.tower = t.name;
+    var tGear = IS_INTERNAL
+      ? '<button class="edit-btn" title="Edit record" data-edit-tower="' + escHtml(t.name) + '">⚙</button>'
+      : '';
+    div.innerHTML =
+      '<div class="station-dot" style="background:#4a8eff;border:1px solid rgba(255,255,255,0.3)"></div>' +
+      '<div class="station-info">' +
+        '<div class="station-name">' + escHtml(t.name) + '</div>' +
+        '<div class="station-sub">' + t.station_count + ' station' + (t.station_count !== 1 ? 's' : '') + '</div>' +
+      '</div><span class="count-badge">' + t.station_count + '</span>' + tGear;
+    div.addEventListener('click', function() { toggleTower(t); });
+    list.appendChild(div);
+    if (IS_INTERNAL) {
+      var tgear = div.querySelector('.edit-btn');
+      if (tgear) {
+        tgear.addEventListener('click', function(e) {
+          e.stopImmediatePropagation();
+          e.stopPropagation();
+          e.preventDefault();
+          openEditByTower(t.name);
+        });
+      }
+    }
+  });
+}
+
+function toggleProgram(p) { if (plottedPrograms.has(p)) removeProgram(p); else plotProgram(p); }
+
+function makePinIcon(d, large) {
+  if (d.logo_url) {
+    var sz = large ? 28 : 22;
+    return L.divIcon({
+      className: '',
+      html: '<div style="width:' + sz + 'px;height:' + sz + 'px;border-radius:50%;border:2px solid rgba(255,255,255,0.8);overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,0.5)">' +
+            '<img src="' + escHtml(d.logo_url) + '" style="width:100%;height:100%;object-fit:contain;background:#fff" ' +
+            'onerror="this.parentNode.style.background=\'' + d.color + '\';this.remove()"></div>',
+      iconSize: [sz,sz], iconAnchor: [sz/2,sz/2],
+    });
+  }
+  var sz = large ? 12 : 9;
+  return L.divIcon({
+    className: '',
+    html: '<div style="width:' + sz + 'px;height:' + sz + 'px;border-radius:50%;background:' + d.color + ';border:2px solid rgba(255,255,255,0.8);box-shadow:0 1px 6px rgba(0,0,0,0.5)"></div>',
+    iconSize: [sz,sz], iconAnchor: [sz/2,sz/2],
+  });
+}
+
+function plotProgram(program) {
+  fetch('/api/map/program?' + new URLSearchParams({ program: program }))
+    .then(function(r) { return r.json(); })
+    .then(function(towers) {
+      if (!Array.isArray(towers)) return;
+      stationLayers[program] = [];
+      towers.forEach(function(d) {
+        var circle = L.circle([d.lat, d.lon], { radius: d.radius_km*1000, color: d.color, fillColor: d.color, fillOpacity: 0.1, weight: 1.5, opacity: 0.5 }).addTo(map);
+        var popup = buildStationPopup(d);
+        var marker = L.marker([d.lat, d.lon], { icon: makePinIcon(d, true) }).addTo(map).bindPopup(popup, { maxWidth: 300 });
+        if (buildStationPopup._lastHls) { marker._hlsAudioId = buildStationPopup._lastHls.audioId; marker._hlsStreamSrc = buildStationPopup._lastHls.src; }
+        var offset = d.logo_url ? -16 : -10;
+        var label = L.tooltip({ permanent: true, direction: 'top', offset: [0, offset], className: 'station-label' })
+          .setContent(escHtml(d.program || d.name)).setLatLng([d.lat, d.lon]).addTo(map);
+        stationLayers[program].push({ marker: marker, circle: circle, label: label });
+      });
+      plottedPrograms.add(program);
+      updateUI(); setItemPlotted('program', program, true);
+      if (towers.length) map.panTo([towers[0].lat, towers[0].lon]);
+    });
+}
+
+function removeProgram(p) {
+  if (stationLayers[p]) { stationLayers[p].forEach(function(l) { l.marker.remove(); l.circle.remove(); l.label.remove(); }); delete stationLayers[p]; }
+  plottedPrograms.delete(p); updateUI(); setItemPlotted('program', p, false);
+}
+
+function toggleTower(t) { if (plottedTowers.has(t.name)) removeTower(t.name); else plotTower(t); }
+
+function plotTower(t) {
+  fetch('/api/map/tower-stations?' + new URLSearchParams({ tower_name: t.name }))
+    .then(function(r) { return r.json(); })
+    .then(function(stations) {
+      if (!Array.isArray(stations)) return;
+      towerLayers[t.name] = [];
+      var twIcon = L.divIcon({ className: '', html: '<div style="width:16px;height:16px;border-radius:50%;background:#4a8eff;border:3px solid rgba(255,255,255,0.9);box-shadow:0 0 10px rgba(74,142,255,0.8)"></div>', iconSize:[16,16], iconAnchor:[8,8] });
+      var twMarker = L.marker([t.lat, t.lon], { icon: twIcon }).addTo(map).bindPopup(buildTowerPopup(t, stations), { maxWidth: 300, maxHeight: 400 });
+      var twLabel = L.tooltip({ permanent: true, direction: 'top', offset: [0,-12], className: 'station-label' }).setContent(escHtml(t.name)).setLatLng([t.lat, t.lon]).addTo(map);
+      towerLayers[t.name].push({ marker: twMarker, label: twLabel });
+
+      var count = stations.length, ringR = Math.min(0.025 + count * 0.003, 0.06);
+      stations.forEach(function(station, i) {
+        var angle = (2*Math.PI*i/count) - (Math.PI/2);
+        var oLat = t.lat + ringR * Math.cos(angle);
+        var oLon = t.lon + (ringR * Math.sin(angle)) / Math.cos(t.lat * Math.PI/180);
+        var sPopup = buildStationPopup(station);
+        var sMarker = L.marker([oLat, oLon], { icon: makePinIcon(station, false) }).addTo(map).bindPopup(sPopup, { maxWidth: 300 });
+        if (buildStationPopup._lastHls) { sMarker._hlsAudioId = buildStationPopup._lastHls.audioId; sMarker._hlsStreamSrc = buildStationPopup._lastHls.src; }
+        var line = L.polyline([[t.lat,t.lon],[oLat,oLon]], { color: station.color, weight: 1, opacity: 0.35, dashArray: '3,4' }).addTo(map);
+        var sLabel = L.tooltip({ permanent: true, direction: 'top', offset: [0, station.logo_url ? -13 : -7], className: 'station-label' })
+          .setContent('<span style="font-size:9px">' + escHtml(station.program || station.name) + '</span>').setLatLng([oLat, oLon]).addTo(map);
+        (function(sid, slat, slon, sr, sc) {
+          sMarker.on('click', function(e) { L.DomEvent.stopPropagation(e); plotSingleFootprint(sid, slat, slon, sr, sc); });
+        })(station.id, t.lat, t.lon, station.radius_km, station.color);
+        towerLayers[t.name].push({ marker: sMarker, label: sLabel, line: line, stationId: station.id });
+      });
+      plottedTowers.add(t.name); updateUI(); setItemPlotted('tower', t.name, true); map.panTo([t.lat, t.lon]);
+    });
+}
+
+function removeTower(name) {
+  if (towerLayers[name]) {
+    towerLayers[name].forEach(function(l) {
+      if (l.marker) l.marker.remove();
+      if (l.label)  l.label.remove();
+      if (l.line)   l.line.remove();
+      if (l.stationId) {
+        var key = 'single_' + l.stationId;
+        if (footprintLayers[key]) { footprintLayers[key].forEach(function(c) { c.remove(); }); delete footprintLayers[key]; }
+      }
+    });
+    delete towerLayers[name];
+  }
+  plottedTowers.delete(name); updateUI(); setItemPlotted('tower', name, false);
+}
+
+function plotSingleFootprint(id, lat, lon, r, color) {
+  var key = 'single_' + id;
+  if (footprintLayers[key]) { footprintLayers[key].forEach(function(c) { c.remove(); }); delete footprintLayers[key]; return; }
+  footprintLayers[key] = [L.circle([lat,lon], { radius: r*1000, color: color, fillColor: color, fillOpacity: 0.12, weight: 2, opacity: 0.6 }).addTo(map)];
+}
+
+function clearAll() {
+  Object.keys(stationLayers).forEach(function(p) { removeProgram(p); });
+  Object.keys(towerLayers).forEach(function(t) { removeTower(t); });
+  Object.keys(footprintLayers).forEach(function(k) { footprintLayers[k].forEach(function(c) { c.remove(); }); });
+  footprintLayers = {};
+}
+
+function updateUI() {
+  var n = plottedPrograms.size + plottedTowers.size;
+  document.getElementById('plotted-count').textContent = n + ' plotted';
+  document.getElementById('clear-btn').disabled = n === 0;
+  var pill = document.getElementById('plotted-pill');
+  pill.style.display = n > 0 ? 'block' : 'none';
+  document.getElementById('plotted-pill-count').textContent = n;
+}
+
+function setItemPlotted(type, key, plotted) {
+  var attr = type === 'program' ? 'data-program' : 'data-tower';
+  document.querySelectorAll('.station-item[' + attr + '="' + CSS.escape(key) + '"]').forEach(function(el) { el.classList.toggle('plotted', plotted); });
+}
+
+function updateCatCount(cat, n) {
+  var el = document.querySelector('.cat-count[data-cat="' + (cat === 'all' ? '' : cat) + '"]');
+  if (el) el.textContent = n;
+}
+
+function buildStationPopup(d) {
+  var cc = {PBS:'#cc4444',CML:'#ffaa00',CTY:'#44cc44',LP:'#888888'}[d.category] || '#888888';
+  var logoHtml   = d.logo_url   ? '<img class="popup-logo" src="' + escHtml(d.logo_url) + '" onerror="this.style.display=\'none\'">' : '';
+  var streamSrc = d.stream_url && d.stream_url.startsWith('http://') ? '/api/stream-proxy?url=' + encodeURIComponent(d.stream_url) : d.stream_url;
+  var isHls = streamSrc && (streamSrc.includes('.m3u8') || streamSrc.includes('.m3u'));
+  var audioId = 'audio-' + (d.id || Math.random().toString(36).substr(2,6));
+  var streamHtml = d.stream_url
+    ? '<div style="margin-top:8px">' +
+      '<div style="font-family:monospace;font-size:0.62rem;color:#64748b;margin-bottom:4px;letter-spacing:0.06em">LIVE STREAM</div>' +
+      '<audio id="' + audioId + '" controls preload="none" style="width:100%;height:32px;border-radius:6px;accent-color:#4a8eff">' +
+      (isHls ? '' : '<source src="' + escHtml(streamSrc) + '">') +
+      '</audio></div>'
+    : '';
+
+  // Return HLS metadata alongside HTML so callers can attach to marker
+  buildStationPopup._lastHls = isHls ? { audioId: audioId, src: streamSrc } : null;
+  return logoHtml +
+    '<div class="popup-name">' + escHtml(d.program || d.name) + '</div>' +
+    '<div class="popup-grid">' +
+    '<span class="popup-label">Tower</span><span class="popup-value">'       + escHtml(d.name)          + '</span>' +
+    '<span class="popup-label">Province</span><span class="popup-value">'    + escHtml(d.province||'—') + '</span>' +
+    '<span class="popup-label">Frequency</span><span class="popup-value">'   + d.freq_mhz + ' MHz</span>' +
+    '<span class="popup-label">ERP</span><span class="popup-value">'         + d.erp_kw   + ' kW</span>' +
+    '<span class="popup-label">Est. radius</span><span class="popup-value">' + d.radius_km + ' km</span>' +
+    '<span class="popup-label">Status</span><span class="popup-value">'      + escHtml(d.status_label)  + '</span>' +
+    '</div>' +
+    '<span class="popup-cat" style="background:' + cc + '22;color:' + cc + ';border:1px solid ' + cc + '44">' + escHtml(d.category) + '</span>' +
+    streamHtml;
+}
+
+function buildTowerPopup(t, stations) {
+  var items = stations.map(function(s) {
+    var sc = {PBS:'#cc4444',CML:'#ffaa00',CTY:'#44cc44',LP:'#888888'}[s.category] || '#888888';
+    var lh = s.logo_url
+      ? '<img class="popup-station-logo" src="' + escHtml(s.logo_url) + '" onerror="this.style.display=\'none\'">'
+      : '<div class="popup-station-dot" style="background:' + sc + '"></div>';
+    return '<div class="popup-station-link" onclick="plotSingleFootprint(' + s.id + ',' + s.lat + ',' + s.lon + ',' + s.radius_km + ',\'' + sc + '\')">' +
+      lh + '<span>' + escHtml(s.program) + '</span>' +
+      '<span style="font-family:monospace;font-size:0.65rem;color:#64748b;margin-left:auto">' + s.freq_mhz + ' MHz</span></div>';
+  }).join('');
+  return '<div class="popup-name">🗼 ' + escHtml(t.name) + '</div>' +
+    '<div class="popup-station-count">' + stations.length + ' station' + (stations.length!==1?'s':'') + ' — click to toggle footprint</div>' +
+    '<div class="popup-station-list">' + items + '</div>';
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.getElementById('tower-search').addEventListener('input', function() {
+  searchQ = this.value; clearTimeout(searchTimer); searchTimer = setTimeout(fetchList, 300);
+});
+document.querySelectorAll('.cat-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.cat-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active'); activecat = btn.dataset.cat; searchQ = '';
+    document.getElementById('tower-search').value = ''; fetchList();
+  });
+});
+document.getElementById('clear-btn').addEventListener('click', clearAll);
+
+// ── MODAL HELPERS ──
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+document.addEventListener('click', function(e) {
+  ['station-edit-backdrop','tower-edit-backdrop','add-modal-backdrop'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el && e.target === el) el.classList.remove('open');
+  });
+});
+
+// ── STATION EDIT (Stations list gear) ──
+function updateSeLogoPreview(filename) {
+  var wrap = document.getElementById('se-logo-wrap');
+  var img  = document.getElementById('se-logo-img');
+  if (filename) {
+    img.src = '/static/station_logos/' + filename;
+    img.onerror = function() { wrap.style.display = 'none'; };
+    wrap.style.display = '';
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+function openEditByProgram(program) {
+  fetch('/api/map/program?' + new URLSearchParams({ program: program }))
+    .then(function(r) { return r.json(); })
+    .then(function(towers) {
+      if (!Array.isArray(towers) || !towers.length) return;
+      var d = towers[0];
+      document.getElementById('se-original-name').value = d.program || '';
+      document.getElementById('se-selected-id').value   = '';
+      document.getElementById('se-station-name').value  = d.program || '';
+      document.getElementById('se-category').value      = d.category || 'CML';
+      document.getElementById('se-stream-url').value    = d.stream_url || '';
+      var logoFile = d.logo_url ? d.logo_url.split('/').pop() : '';
+      document.getElementById('se-logo-path').value     = logoFile;
+      document.getElementById('se-save-msg').style.display  = 'none';
+      document.getElementById('se-per-tower').style.display = 'none';
+      document.getElementById('se-save-tower-btn').style.display = 'none';
+      document.getElementById('se-save-tower-btn').disabled = true;
+
+      // Show logo at top of modal
+      updateSeLogoPreview(logoFile);
+
+      // Build tower picker list with stream_url per row
+      var list = document.getElementById('se-tower-list');
+      list.innerHTML = towers.map(function(t) {
+        return '<div class="picker-row" data-id="' + t.id + '" data-freq="' + t.freq_mhz +
+               '" data-erp="' + t.erp_kw + '" data-unitip="' + escHtml(t.unit_ip||'') +
+               '" data-streamurl="' + escHtml(t.stream_url||'') + '">' +
+               '<span class="picker-name">' + escHtml(t.name) + '</span>' +
+               '<span class="picker-freq">' + t.freq_mhz + ' MHz</span>' +
+               '</div>';
+      }).join('');
+
+      // Single tower — pre-select it
+      if (towers.length === 1) {
+        selectStationTower(list.querySelector('.picker-row'));
+      } else {
+        list.querySelectorAll('.picker-row').forEach(function(row) {
+          row.addEventListener('click', function() { selectStationTower(this); });
+        });
+      }
+
+      document.getElementById('station-edit-backdrop').classList.add('open');
+    });
+}
+
+function selectStationTower(row) {
+  document.querySelectorAll('#se-tower-list .picker-row').forEach(function(r) {
+    r.classList.remove('picker-selected');
+  });
+  row.classList.add('picker-selected');
+  document.getElementById('se-selected-id').value      = row.dataset.id;
+  document.getElementById('se-freq').value             = row.dataset.freq;
+  document.getElementById('se-erp').value              = row.dataset.erp;
+  document.getElementById('se-unit-ip').value          = row.dataset.unitip;
+  document.getElementById('se-stream-url-tower').value = row.dataset.streamurl || '';
+  document.getElementById('se-per-tower').style.display    = '';
+  document.getElementById('se-save-tower-btn').style.display = '';
+  document.getElementById('se-save-tower-btn').disabled      = false;
+}
+
+function saveSelectedTower() {
+  var id = document.getElementById('se-selected-id').value;
+  if (!id) return;
+  fetch('/api/map/station/' + id, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      freq_mhz:   parseFloat(document.getElementById('se-freq').value),
+      erp_kw:     parseFloat(document.getElementById('se-erp').value),
+      unit_ip:    document.getElementById('se-unit-ip').value,
+      stream_url: document.getElementById('se-stream-url-tower').value,
+    }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function() {
+    document.getElementById('se-save-msg').style.display = 'flex';
+    setTimeout(function() { document.getElementById('se-save-msg').style.display = 'none'; }, 1500);
+  })
+  .catch(function() { alert('Save failed.'); });
+}
+
+function saveSharedFields() {
+  fetch('/api/map/program-update', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      station_name_original: document.getElementById('se-original-name').value,
+      station_name: document.getElementById('se-station-name').value,
+      category:     document.getElementById('se-category').value,
+      stream_url:   document.getElementById('se-stream-url').value,
+      logo_path:    document.getElementById('se-logo-path').value,
+    }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function() {
+    document.getElementById('se-save-msg').style.display = 'flex';
+    setTimeout(function() { closeModal('station-edit-backdrop'); fetchList(); }, 800);
+  })
+  .catch(function() { alert('Save failed.'); });
+}
+
+function deleteSelectedTower() {
+  var id = document.getElementById('te-selected-id').value;
+  if (!id) return;
+  var stationName = document.querySelector('#te-station-list .picker-selected .picker-name');
+  var label = stationName ? stationName.textContent : 'this record';
+  if (!confirm('Delete ' + label + ' from this tower?\nThis cannot be undone.')) return;
+  fetch('/api/map/station/' + id, { method: 'DELETE' })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.error) { alert(res.error); return; }
+      closeModal('tower-edit-backdrop');
+      fetchList();
+    })
+    .catch(function() { alert('Delete failed — please try again.'); });
+}
+
+function deleteAllStationTowers() {
+  var name = document.getElementById('se-original-name').value;
+  if (!name) return;
+  if (!confirm('Delete ALL tower records for "' + name + '"?\nThis removes the station from the map entirely and cannot be undone.')) return;
+  fetch('/api/map/program-delete?' + new URLSearchParams({ station_name: name }), { method: 'DELETE' })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.error) { alert(res.error); return; }
+      closeModal('station-edit-backdrop');
+      fetchList();
+    })
+    .catch(function() { alert('Delete failed — please try again.'); });
+}
+function openEditByTower(towerName) {
+  fetch('/api/map/tower-stations?' + new URLSearchParams({ tower_name: towerName }))
+    .then(function(r) { return r.json(); })
+    .then(function(stations) {
+      if (!Array.isArray(stations) || !stations.length) return;
+      document.getElementById('te-tower-name').textContent = towerName;
+      document.getElementById('te-province').textContent   = stations[0].province || '—';
+      document.getElementById('te-selected-id').value      = '';
+      document.getElementById('te-per-station').style.display = 'none';
+      document.getElementById('te-save-btn').disabled      = true;
+      document.getElementById('te-delete-btn').disabled    = true;
+      document.getElementById('te-save-msg').style.display = 'none';
+
+      var list = document.getElementById('te-station-list');
+      list.innerHTML = stations.map(function(s) {
+        var cc = {PBS:'#cc4444',CML:'#ffaa00',CTY:'#44cc44',LP:'#888888'}[s.category]||'#888';
+        var logoHtml = s.logo_url
+          ? '<img src="' + escHtml(s.logo_url) + '" style="width:24px;height:24px;border-radius:4px;object-fit:contain;background:rgba(255,255,255,0.06);flex-shrink:0" onerror="this.style.display=\'none\'">'
+          : '<span style="width:8px;height:8px;border-radius:50%;background:' + cc + ';flex-shrink:0;display:inline-block"></span>';
+        return '<div class="picker-row" data-id="' + s.id + '" data-freq="' + s.freq_mhz +
+               '" data-erp="' + s.erp_kw + '" data-unitip="' + escHtml(s.unit_ip||'') +
+               '" data-streamurl="' + escHtml(s.stream_url||'') + '">' +
+               logoHtml +
+               '<span class="picker-name">' + escHtml(s.program||s.name) + '</span>' +
+               '<span class="picker-freq">' + s.freq_mhz + ' MHz · ' + s.erp_kw + ' kW</span>' +
+               '</div>';
+      }).join('');
+
+      list.querySelectorAll('.picker-row').forEach(function(row) {
+        row.addEventListener('click', function() { selectTowerStation(this); });
+      });
+
+      document.getElementById('tower-edit-backdrop').classList.add('open');
+    });
+}
+
+function selectTowerStation(row) {
+  document.querySelectorAll('#te-station-list .picker-row').forEach(function(r) {
+    r.classList.remove('picker-selected');
+  });
+  row.classList.add('picker-selected');
+  document.getElementById('te-selected-id').value         = row.dataset.id;
+  document.getElementById('te-freq').value                = row.dataset.freq;
+  document.getElementById('te-erp').value                 = row.dataset.erp;
+  document.getElementById('te-unit-ip').value             = row.dataset.unitip;
+  document.getElementById('te-stream-url').value          = row.dataset.streamurl || '';
+  document.getElementById('te-per-station').style.display = '';
+  document.getElementById('te-save-btn').disabled         = false;
+  document.getElementById('te-delete-btn').disabled       = false;
+}
+
+function saveTowerStationEdit() {
+  var id = document.getElementById('te-selected-id').value;
+  if (!id) return;
+  fetch('/api/map/station/' + id, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      freq_mhz:   parseFloat(document.getElementById('te-freq').value),
+      erp_kw:     parseFloat(document.getElementById('te-erp').value),
+      unit_ip:    document.getElementById('te-unit-ip').value,
+      stream_url: document.getElementById('te-stream-url').value,
+    }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function() {
+    document.getElementById('te-save-msg').style.display = 'flex';
+    setTimeout(function() { closeModal('tower-edit-backdrop'); fetchList(); }, 800);
+  })
+  .catch(function() { alert('Save failed.'); });
+}
+
+// ── ADD NEW ──
+var addMode = 'tower'; // 'tower' or 'opstation'
+
+function openAddModal() {
+  addMode = currentView === 'towers' ? 'tower' : 'tower'; // default to tower
+  showAddForm(addMode);
+  document.getElementById('add-save-msg').style.display = 'none';
+  document.getElementById('add-modal-backdrop').classList.add('open');
+}
+
+function showAddForm(mode) {
+  addMode = mode;
+  var isTower = mode === 'tower';
+  document.getElementById('add-tower-form').style.display    = isTower ? '' : 'none';
+  document.getElementById('add-opstation-form').style.display = isTower ? 'none' : '';
+  document.getElementById('add-modal-title').textContent =
+    isTower ? 'Add Tower (TBFPStation)' : 'Add Operational Station (dbo.Station)';
+
+  // Tab-style toggle in footer — swap button label
+  document.getElementById('add-submit-btn').textContent = isTower ? 'Add Tower' : 'Add Station';
+}
+
+// Inject tab switcher into add modal header on first open
+(function() {
+  var header = document.querySelector('#add-modal-backdrop .edit-modal-header');
+  if (!header) return;
+  var tabs = document.createElement('div');
+  tabs.style.cssText = 'display:flex;gap:4px;margin-top:8px';
+  tabs.innerHTML =
+    '<button onclick="showAddForm(\'tower\')" id="tab-tower" style="flex:1;padding:4px 0;border-radius:6px;border:1px solid var(--cobalt);background:var(--cobalt);color:#fff;font-family:var(--mono);font-size:0.65rem;cursor:pointer">📡 Tower</button>' +
+    '<button onclick="showAddForm(\'opstation\')" id="tab-opstation" style="flex:1;padding:4px 0;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--mono);font-size:0.65rem;cursor:pointer">🔌 Pipeline Station</button>';
+  header.querySelector('.edit-modal-title').after(tabs);
+})();
+
+function submitAdd() {
+  if (addMode === 'tower') {
+    var required = {
+      'at-station-name': 'Station Name',
+      'at-tower': 'Tower Location',
+      'at-lat-dms': 'Latitude DMS',
+      'at-lon-dms': 'Longitude DMS',
+      'at-lat': 'Latitude Decimal',
+      'at-lon': 'Longitude Decimal',
+      'at-freq': 'Frequency',
+      'at-erp': 'ERP',
+    };
+    for (var fid in required) {
+      if (!document.getElementById(fid).value) {
+        alert(required[fid] + ' is required.'); return;
+      }
+    }
+    var payload = {
+      station_name:  document.getElementById('at-station-name').value,
+      category:      document.getElementById('at-category').value,
+      tower_location: document.getElementById('at-tower').value.toUpperCase(),
+      lat_dms:       document.getElementById('at-lat-dms').value,
+      lon_dms:       document.getElementById('at-lon-dms').value,
+      lat_decimal:   parseFloat(document.getElementById('at-lat').value),
+      lon_decimal:   parseFloat(document.getElementById('at-lon').value),
+      freq_mhz:      parseFloat(document.getElementById('at-freq').value),
+      erp_kw:        parseFloat(document.getElementById('at-erp').value),
+      province:      document.getElementById('at-province').value,
+      polarisation:  document.getElementById('at-pol').value,
+      stream_url:    document.getElementById('at-stream-url').value,
+      logo_path:     document.getElementById('at-logo-path').value,
+      status:        document.getElementById('at-status').value,
+      unit_ip:       document.getElementById('at-unit-ip').value,
+      on_air_date:   document.getElementById('at-onair').value || null,
+    };
+    fetch('/api/map/tower', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.error) { alert(res.error); return; }
+      document.getElementById('add-save-msg').style.display = 'flex';
+      setTimeout(function() { closeModal('add-modal-backdrop'); fetchList(); }, 800);
+    })
+    .catch(function() { alert('Add failed — please try again.'); });
+
+  } else {
+    if (!document.getElementById('os-station-name').value) {
+      alert('Station Name is required.'); return;
+    }
+    var payload = {
+      station_name: document.getElementById('os-station-name').value,
+      stream_url:   document.getElementById('os-stream-url').value,
+    };
+    fetch('/api/map/operational-station', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.error) { alert(res.error); return; }
+      document.getElementById('add-save-msg').style.display = 'flex';
+      setTimeout(function() { closeModal('add-modal-backdrop'); }, 1000);
+    })
+    .catch(function() { alert('Add failed — please try again.'); });
+  }
+}
+
+fetchList();
+</script>
+{% endblock %}
+{% endblock %}

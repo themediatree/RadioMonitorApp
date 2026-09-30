@@ -1,0 +1,36 @@
+{% extends "base_app.html" %}
+{% block title %}{{ 'Edit' if agency else 'New' }} agency — RadioMonitor{% endblock %}
+{% block topbar_title %}{{ 'Edit' if agency else 'New' }} agency{% endblock %}
+{% block content %}
+<section class="auth-section"><div class="auth-card auth-card-wide">
+    <h1>{{ 'Edit agency' if agency else 'New agency' }}</h1>
+    {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
+
+    {% set action = '/admin/agencies/' ~ agency.AgencyID if agency else '/admin/agencies' %}
+    <form method="post" action="{{ action }}" class="form-stack">
+        <label class="form-field">
+            <span class="form-label">Name</span>
+            <input type="text" name="name" required class="form-input"
+                   value="{{ agency.Name if agency else (form.name or '') }}">
+        </label>
+        <label class="form-field">
+            <span class="form-label">Contact email <span class="muted small">(optional)</span></span>
+            <input type="email" name="contact_email" class="form-input"
+                   value="{{ agency.ContactEmail or '' if agency else (form.contact_email or '') }}">
+        </label>
+        <label class="form-field">
+            <span class="form-label">Contact phone <span class="muted small">(optional)</span></span>
+            <input type="text" name="contact_phone" class="form-input"
+                   value="{{ agency.ContactPhone or '' if agency else (form.contact_phone or '') }}">
+        </label>
+        <label class="form-field-inline">
+            <input type="checkbox" name="is_active" value="on"
+                   {% if not agency or agency.IsActive %}checked{% endif %}>
+            <span class="form-label">Active</span>
+        </label>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">{{ 'Save changes' if agency else 'Create agency' }}</button>
+            <a href="/admin/agencies" class="btn btn-ghost">Cancel</a>
+        </div>
+    </form>
+{% endblock %}

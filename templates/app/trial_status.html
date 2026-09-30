@@ -1,0 +1,163 @@
+{% extends "base_app.html" %}
+{% block title %}Trial Status — NOCTIV{% endblock %}
+{% block topbar_title %}Trial Status{% endblock %}
+
+{% block content %}
+<style>
+.trial-hero {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 1.5rem;
+  margin-bottom: 2rem; flex-wrap: wrap;
+}
+.trial-hero h1 {
+  font-family: var(--display); font-size: 1.75rem;
+  font-weight: 800; color: var(--white); letter-spacing: -0.02em;
+}
+.trial-hero-sub { font-size: 0.8rem; color: var(--muted); margin-top: 0.4rem; }
+
+.trial-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden; margin-bottom: 1.25rem;
+}
+.trial-card-header {
+  padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);
+  font-family: var(--display); font-size: 0.9rem;
+  font-weight: 600; color: var(--white);
+}
+.trial-card-body { padding: 1.25rem; }
+
+.service-row {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 0.9rem 0; border-bottom: 1px solid rgba(192,207,224,0.06);
+}
+.service-row:last-child { border-bottom: none; }
+.service-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; flex-shrink: 0;
+}
+.service-info { flex: 1; min-width: 0; }
+.service-name { font-size: 0.88rem; color: var(--white); font-weight: 500; margin-bottom: 0.3rem; }
+.service-bar-wrap { height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+.service-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+.service-nums {
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--muted); white-space: nowrap; flex-shrink: 0;
+  text-align: right; min-width: 110px;
+}
+.service-nums strong { color: var(--white); }
+
+.days-remaining-big {
+  font-family: var(--mono); font-size: 3rem;
+  font-weight: 500; color: var(--white); line-height: 1;
+}
+
+.expiry-info {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
+}
+.expiry-field { }
+.expiry-label {
+  font-family: var(--mono); font-size: 0.62rem;
+  color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.3rem;
+}
+.expiry-value { font-size: 0.88rem; color: var(--pale); font-weight: 500; }
+</style>
+
+<div class="trial-hero">
+  <div>
+    <div style="font-family:var(--mono);font-size:0.62rem;color:var(--glow);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:0.4rem">
+      Trial Account
+    </div>
+    <h1>Trial Status</h1>
+    <div class="trial-hero-sub">Your per-service credit usage and trial details</div>
+  </div>
+  <a href="/dashboard" class="btn btn-ghost">← Dashboard</a>
+</div>
+
+{% if trial_cfg %}
+
+<!-- EXPIRY INFO -->
+<div class="trial-card">
+  <div class="trial-card-header">Trial Details</div>
+  <div class="trial-card-body">
+    <div style="display:flex;align-items:center;gap:2rem;flex-wrap:wrap">
+      <div>
+        <div style="font-family:var(--mono);font-size:0.62rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem">Days Remaining</div>
+        {% if trial_cfg.is_active %}
+        <div class="days-remaining-big">{{ trial_cfg.days_remaining }}</div>
+        {% else %}
+        <div class="days-remaining-big" style="color:#f87171">Expired</div>
+        {% endif %}
+      </div>
+      <div class="expiry-info" style="flex:1">
+        <div class="expiry-field">
+          <div class="expiry-label">Trial Station</div>
+          <div class="expiry-value">{{ trial_cfg.trial_station.StationName if trial_cfg.trial_station else '—' }}</div>
+        </div>
+        <div class="expiry-field">
+          <div class="expiry-label">Expires</div>
+          <div class="expiry-value">{{ trial_cfg.TrialExpiresAt.strftime("%d %B %Y") }}</div>
+        </div>
+        <div class="expiry-field">
+          <div class="expiry-label">Status</div>
+          <div class="expiry-value">
+            {% if trial_cfg.is_active %}
+            <span style="color:#4ade80">● Active</span>
+            {% else %}
+            <span style="color:#f87171">● Expired</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SERVICE CREDIT USAGE -->
+<div class="trial-card">
+  <div class="trial-card-header">Credit Usage by Service</div>
+  <div class="trial-card-body">
+
+    {% set services = [
+      ('commercial',    '📡', 'Commercial Detection', trial_cfg.MaxCommercial,    '#4a8eff',  'linear-gradient(90deg,#2d6be4,#4a8eff)'),
+      ('song',          '🎵', 'Song Monitoring',      trial_cfg.MaxSong,          '#b388ff',  'linear-gradient(90deg,#7c4dff,#b388ff)'),
+      ('word',          '🔍', 'Keyword Monitoring',   trial_cfg.MaxWord,          '#ff9100',  'linear-gradient(90deg,#ff6d00,#ff9100)'),
+      ('transcription', '📄', 'Transcription',        trial_cfg.MaxTranscription, '#4ade80',  'linear-gradient(90deg,#00c853,#4ade80)'),
+    ] %}
+
+    {% for ref, icon, label, cap, colour, gradient in services %}
+    {% set used = consumed.get(ref, 0) %}
+    {% set remaining = [cap - used, 0] | max %}
+    {% set pct = [(used / cap * 100)|int, 100] | min if cap > 0 else 0 %}
+    {% set warn = pct >= 80 %}
+    <div class="service-row">
+      <div class="service-icon" style="background:rgba({{ colour|replace('#','') }}, 0.12)">{{ icon }}</div>
+      <div class="service-info">
+        <div class="service-name">{{ label }}</div>
+        <div class="service-bar-wrap">
+          <div class="service-bar-fill" style="width:{{ pct }}%;background:{{ gradient }}{% if warn %};background:linear-gradient(90deg,#ef4444,#f87171){% endif %}"></div>
+        </div>
+      </div>
+      <div class="service-nums">
+        <strong>{{ "%.1f"|format(remaining) }}</strong> / {{ "%.0f"|format(cap) }} cr left
+      </div>
+    </div>
+    {% endfor %}
+
+  </div>
+</div>
+
+<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;font-size:0.8rem;color:var(--muted);line-height:1.6">
+  Need more credits or want to upgrade to a full plan? Contact us at
+  <a href="mailto:support@noctiv.co.za" style="color:var(--glow)">support@noctiv.co.za</a>
+</div>
+
+{% else %}
+<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:4rem 2rem;text-align:center;color:var(--muted)">
+  <div style="font-size:2rem;margin-bottom:1rem;opacity:0.4">📋</div>
+  <div style="font-family:var(--display);font-size:1rem;color:var(--chrome)">No trial configuration found</div>
+  <p class="small" style="margin-top:0.4rem">Your account is not on a trial plan.</p>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,169 @@
+{% extends "base_app.html" %}
+{% block title %}{{ commercial.DisplayTapeID or commercial.CommercialName }} — RadioMonitor{% endblock %}
+{% block topbar_title %}{{ commercial.DisplayTapeID or commercial.CommercialName }}{% endblock %}
+{% block content %}
+
+    <div class="page-eyebrow">Commercials</div>
+<header class="page-header">
+        <h1>{{ commercial.DisplayTapeID or commercial.CommercialName }}</h1>
+        <a href="/commercials" class="nav-link">← Back to commercials</a>
+    </header>
+
+    {% if withdraw_success %}
+    <div class="alert alert-success">Commercial withdrawn successfully. The pipeline will stop detecting it from the next midnight rebuild.</div>
+    {% endif %}
+
+    {% if commercial.Status == "active" or commercial.Status == "pending" %}
+    <div class="card" style="border-left:4px solid #dc3545; margin-bottom:var(--space-4)">
+        <p class="muted small" style="margin:0">Withdrawing a commercial stops future detections from the next midnight rebuild. This cannot be undone.</p>
+        <form method="post" action="/commercials/{{ commercial.CommercialID }}/withdraw"
+              onsubmit="return confirm('Withdraw {{ commercial.DisplayTapeID }}? This cannot be undone.')">
+            <button type="submit" class="btn btn-danger" style="margin-top:var(--space-2)">Withdraw</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- Commercial details -->
+    <section class="card detection-detail">
+        <h2>Commercial details</h2>
+        <dl class="detail-grid">
+            <dt>Tape ID</dt>
+            <dd><strong>{{ commercial.DisplayTapeID or "—" }}</strong></dd>
+
+            <dt>Brand</dt>
+            <dd>{{ commercial.Brand or "—" }}</dd>
+
+            <dt>Type</dt>
+            <dd>{{ commercial.CommercialType }}</dd>
+
+            <dt>Status</dt>
+            <dd><span class="badge badge-{{ commercial.Status }}">{{ commercial.Status }}</span></dd>
+
+            <dt>Registered by</dt>
+            <dd>
+                {% if commercial.created_by %}
+                    {{ commercial.created_by.FullName or commercial.created_by.Email }}
+                {% else %}
+                    <span class="muted">—</span>
+                {% endif %}
+            </dd>
+
+            <dt>Registered</dt>
+            <dd>{{ commercial.CreatedAt.strftime("%Y-%m-%d %H:%M") if commercial.CreatedAt else "—" }}</dd>
+
+            <dt>Fingerprint ID</dt>
+            <dd class="muted small">{{ commercial.FingerprintID or "—" }}</dd>
+
+            {% if sibling_count > 0 %}
+            <dt>Other subscribers</dt>
+            <dd class="muted small">{{ sibling_count }} other subscriber{{ "" if sibling_count == 1 else "s" }} also registered this audio</dd>
+            {% endif %}
+        </dl>
+    </section>
+
+    <!-- Campaigns -->
+    {% if campaigns %}
+    <section class="card" style="margin-top:var(--space-3)">
+        <h2>Campaigns</h2>
+        <table class="data-table">
+            <thead><tr><th>Campaign name</th><th>Start</th><th>End</th></tr></thead>
+            <tbody>
+            {% for c in campaigns %}
+            <tr>
+                <td>{{ c.Name }}</td>
+                <td>{{ c.StartDate }}</td>
+                <td>{{ c.EndDate or "—" }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </section>
+    {% endif %}
+
+    <!-- Stations -->
+    {% if stations %}
+    <section class="card" style="margin-top:var(--space-3)">
+        <h2>Registered stations</h2>
+        <ul class="station-list">
+            {% for s in stations %}<li>{{ s.StationName }}</li>{% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+    <!-- Broadcast schedule -->
+    {% if schedule_windows %}
+    <section class="card" style="margin-top:var(--space-3)">
+        <h2>Broadcast schedule</h2>
+        <table class="data-table">
+            <thead><tr><th>Station</th><th>Day</th><th>From</th><th>To</th></tr></thead>
+            <tbody>
+            {% set day_names = {-1: "All days", 0: "Monday", 1: "Tuesday", 2: "Wednesday", 3: "Thursday", 4: "Friday", 5: "Saturday", 6: "Sunday"} %}
+            {% for w in schedule_windows %}
+            <tr>
+                <td>{{ w.station_name }}</td>
+                <td>{{ day_names.get(w.DayOfWeek, w.DayOfWeek) }}</td>
+                <td>{{ w.TimeFrom.strftime("%H:%M:%S") if w.TimeFrom else "—" }}</td>
+                <td>{{ w.TimeTo.strftime("%H:%M:%S") if w.TimeTo else "—" }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </section>
+    {% endif %}
+
+    <!-- Registration receipt -->
+    <section class="card receipt-card" style="margin-top:var(--space-3)">
+        <h2>Registration receipt</h2>
+        <p class="muted small">This is the system record of the registration event. Print or save for your records.</p>
+
+        <dl class="detail-grid">
+            <dt>Commercial (Tape ID)</dt>
+            <dd>{{ commercial.DisplayTapeID or commercial.CommercialName }}</dd>
+
+            <dt>Brand</dt>
+            <dd>{{ commercial.Brand or "—" }}</dd>
+
+            <dt>Type</dt>
+            <dd>{{ commercial.CommercialType }}</dd>
+
+            <dt>Subscriber</dt>
+            <dd>{{ commercial.subscriber.Name if commercial.subscriber else "—" }}
+                {% if commercial.subscriber and commercial.subscriber.CompanyName %}
+                — {{ commercial.subscriber.CompanyName }}{% endif %}</dd>
+
+            <dt>Registered by</dt>
+            <dd>{% if commercial.created_by %}{{ commercial.created_by.FullName or commercial.created_by.Email }}{% else %}—{% endif %}</dd>
+
+            <dt>Registered at</dt>
+            <dd>{{ commercial.CreatedAt.strftime("%Y-%m-%d %H:%M:%S") if commercial.CreatedAt else "—" }}</dd>
+
+            <dt>Stations</dt>
+            <dd>{{ stations | map(attribute='StationName') | join(', ') if stations else "—" }}</dd>
+
+            <dt>Campaigns</dt>
+            <dd>{{ campaigns | map(attribute='Name') | join(', ') if campaigns else "—" }}</dd>
+
+            {% if receipt %}
+            <dt>Audit reference</dt>
+            <dd class="muted small">AuditID {{ receipt.AuditID }} — {{ receipt.CreatedAt.strftime("%Y-%m-%d %H:%M:%S") if receipt.CreatedAt else "—" }}</dd>
+
+            <dt>Staging confirmed</dt>
+            <dd class="muted small">
+                {% if "staged=True" in (receipt.Metadata_ or "") %}
+                ✓ Files staged to all registered stations
+                {% elif "staged=False" in (receipt.Metadata_ or "") %}
+                — Follower registration (audio already staged by another subscriber)
+                {% else %}
+                — (legacy record)
+                {% endif %}
+            </dd>
+            {% endif %}
+        </dl>
+
+        <div style="margin-top:var(--space-3)">
+            <button onclick="window.print()" class="btn btn-ghost">Print receipt</button>
+            <a href="/detections?commercial={{ commercial.DisplayTapeID }}" class="btn btn-primary">View detections</a>
+        </div>
+    </section>
+
+{% endblock %}

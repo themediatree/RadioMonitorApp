@@ -1,0 +1,165 @@
+{% extends "base_app.html" %}
+{% block title %}Word Detections — RadioMonitor{% endblock %}
+{% block topbar_title %}Word Detections{% endblock %}
+{% block content %}
+    <div class="page-eyebrow">Words & Phrases</div>
+<header class="page-header">
+        <h1>Word & phrase detections</h1>
+        <a href="/words" class="nav-link">← Back to words</a>
+    </header>
+
+    <form method="get" action="/words/detections" class="filter-bar">
+        <label class="form-field">
+            <span class="form-label">Station</span>
+            <select name="station_id" class="form-input" onchange="this.form.submit()">
+                <option value="">All stations</option>
+                {% for s in stations %}
+                <option value="{{ s.StationID }}" {{ 'selected' if filters.station_id == (s.StationID|string) }}>{{ s.StationName }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="form-field">
+            <span class="form-label">Keyword</span>
+            <input name="keyword" class="form-input" placeholder="Search…" value="{{ filters.keyword }}">
+        </label>
+        <label class="form-field">
+            <span class="form-label">Source</span>
+            <select name="source" class="form-input" onchange="this.form.submit()">
+                <option value="">All</option>
+                <option value="live" {{ 'selected' if filters.source == 'live' }}>Live</option>
+                <option value="retrospective" {{ 'selected' if filters.source == 'retrospective' }}>Retrospective</option>
+            </select>
+        </label>
+        <label class="form-field">
+            <span class="form-label">From</span>
+            <input type="date" name="date_from" class="form-input" value="{{ filters.date_from }}">
+        </label>
+        <label class="form-field">
+            <span class="form-label">To</span>
+            <input type="date" name="date_to" class="form-input" value="{{ filters.date_to }}">
+        </label>
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-primary">Apply</button>
+            <a href="javascript:history.back()" class="btn btn-ghost">Clear</a>
+        </div>
+    </form>
+
+    <p class="muted small">{{ total }} detection{{ "" if total == 1 else "s" }}{% if total_pages > 1 %} — page {{ page }} of {{ total_pages }}{% endif %}.</p>
+
+    {% if rows %}
+    <div class="table-scroll"><table class="data-table">
+        <thead><tr><th>Keyword</th><th>Station</th><th>Source</th><th>Detected</th><th class="det-count-col"></th></tr></thead>
+        {% if is_grouped %}
+        {# Grouped view — one row per unique keyword #}
+        <tbody>
+        {% set ns = namespace(seen=[]) %}
+        {% for d in rows %}
+        {% set kw = d.Keyword or '—' %}
+        {% if kw not in ns.seen %}
+        {% set _ = ns.seen.append(kw) %}
+        {% set kw_total = keyword_counts.get(kw, 1) %}
+        <tr>
+            <td><strong>{{ kw }}</strong></td>
+            <td class="muted">{{ station_map.get(d.StationID, d.StationID) }}</td>
+            <td><span class="badge badge-{{ 'active' if d.DetectionSource == 'live' else 'pending' }}">{{ d.DetectionSource }}</span></td>
+            <td class="muted">{{ d.DetectionTime.strftime("%Y-%m-%d %H:%M") if d.DetectionTime else "—" }}</td>
+            <td><a href="/words/detections/{{ d.WordDetectionID }}" class="nav-link">Details</a></td>
+            <td style="width:70px;text-align:center;white-space:nowrap;vertical-align:middle">
+              <span style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:11px;background:#fb923c;color:#060c1a;font-size:0.62rem;font-weight:700;padding:0 5px;">{{ kw_total }}</span>
+              <a {% if kw_total > 1 %}href="/words/detections?keyword={{ kw | urlencode }}"{% endif %} class="btn btn-ghost btn-sm" style="margin-left:3px;padding:0 5px;font-size:0.68rem;border-color:rgba(74,142,255,{% if kw_total > 1 %}0.3);color:var(--glow){% else %}0.1);color:var(--muted);cursor:default;pointer-events:none{% endif %};" title="{% if kw_total > 1 %}View all {{ kw_total }}{% endif %}">+</a>
+            </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+        </tbody>
+        {% else %}
+        {# Detail view — paginated individual detections for selected keyword #}
+        <caption style="caption-side:top;text-align:left;padding:0.5rem 0;font-size:0.82rem;color:var(--muted)">
+          <a href="javascript:history.back()" style="color:var(--glow);text-decoration:none">← All keywords</a>
+          &nbsp;·&nbsp; Showing all detections for <strong style="color:var(--white)">{{ filters.keyword }}</strong>
+        </caption>
+        <tbody>
+        {% for d in rows %}
+        <tr>
+            <td><strong>{{ d.Keyword or "—" }}</strong></td>
+            <td class="muted">{{ station_map.get(d.StationID, d.StationID) }}</td>
+            <td><span class="badge badge-{{ 'active' if d.DetectionSource == 'live' else 'pending' }}">{{ d.DetectionSource }}</span></td>
+            <td class="muted">{{ d.DetectionTime.strftime("%Y-%m-%d %H:%M") if d.DetectionTime else "—" }}</td>
+            <td><a href="/words/detections/{{ d.WordDetectionID }}" class="nav-link">Details</a></td>
+            <td style="width:70px"></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+        {% endif %}
+    </table></div>
+<script>
+(function() {
+  function groupDetections(tbodyId) {
+    var tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    var rows = Array.from(tbody.querySelectorAll('tr[data-gk]'));
+    if (!rows.length) return;
+    var groups = {}, order = [];
+    rows.forEach(function(r) {
+      var k = r.getAttribute('data-gk');
+      if (!groups[k]) { groups[k] = []; order.push(k); }
+      groups[k].push(r);
+    });
+    tbody.innerHTML = '';
+    order.forEach(function(key, idx) {
+      var grp = groups[key], first = grp[0], count = grp.length;
+      var gid = tbodyId + '-g' + idx;
+      var summary = first.cloneNode(true);
+      var fc = summary.querySelector('td:first-child');
+      if (fc) {
+        var badge = document.createElement('span');
+        badge.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;margin-left:6px;min-width:18px;height:18px;border-radius:9px;background:#fb923c;color:#fff;font-size:0.62rem;font-weight:700;vertical-align:middle;padding:0 4px;';
+        badge.textContent = count;
+        fc.appendChild(badge);
+        if (count > 1) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.style.cssText = 'margin-left:5px;background:none;border:1px solid rgba(74,142,255,0.3);border-radius:4px;color:var(--glow);cursor:pointer;font-size:0.68rem;padding:0 5px;line-height:1.4;vertical-align:middle;';
+          btn.textContent = '+';
+          btn.setAttribute('data-gid', gid);
+          btn.onclick = function(e) {
+            e.stopPropagation();
+            var g = this.getAttribute('data-gid');
+            var kids = document.querySelectorAll('tr[data-parent="' + g + '"]');
+            var open = this.textContent === '−';
+            kids.forEach(function(c) { c.style.display = open ? 'none' : ''; });
+            this.textContent = open ? '+' : '−';
+          };
+          fc.appendChild(btn);
+        }
+      }
+      tbody.appendChild(summary);
+      if (count > 1) {
+        grp.slice(1).forEach(function(r) {
+          r.setAttribute('data-parent', gid);
+          r.style.display = 'none';
+          r.style.background = 'rgba(74,142,255,0.04)';
+          tbody.appendChild(r);
+        });
+      }
+    });
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    groupDetections('tbody-songs');
+    groupDetections('tbody-words');
+    groupDetections('tbody-commercials');
+  });
+})();
+</script>
+
+    {% if total_pages > 1 %}
+    <nav class="pagination">
+        {% if page > 1 %}<a href="/words/detections?page={{ page-1 }}&keyword={{ filters.keyword | urlencode }}&station_id={{ filters.station_id }}" class="btn btn-ghost">‹ Previous</a>{% endif %}
+        <span class="muted small">Page {{ page }} of {{ total_pages }}</span>
+        {% if page < total_pages %}<a href="/words/detections?page={{ page+1 }}&keyword={{ filters.keyword | urlencode }}&station_id={{ filters.station_id }}" class="btn btn-ghost">Next ›</a>{% endif %}
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="card placeholder"><p class="muted">No word detections found.</p></div>
+    {% endif %}
+{% endblock %}

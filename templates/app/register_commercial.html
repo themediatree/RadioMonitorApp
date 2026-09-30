@@ -1,0 +1,238 @@
+{% extends "base_app.html" %}
+{% block title %}Register Commercial — RadioMonitor{% endblock %}
+{% block topbar_title %}Register Commercial{% endblock %}
+{% from "macros/station_picker.html" import station_picker %}
+{% block content %}
+    <div class="page-eyebrow">Commercials</div>
+    <header class="page-header">
+        <h1>Register commercial for detection</h1>
+        <a href="/commercials" class="nav-link">← Back to commercials</a>
+    </header>
+    <p class="muted" style="margin-top:-0.5rem;margin-bottom:1.25rem">RadioMonitor will detect when this commercial airs on the selected stations and deliver proof of broadcast.</p>
+
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/register-commercial" enctype="multipart/form-data" class="card form-card">
+
+        {% if user.user_type.value == "internal" %}
+        <label class="form-field">
+            <span class="form-label">Subscriber (registering on behalf of)</span>
+            <select name="subscriber_id" class="form-input" required>
+                <option value="" disabled {% if not form.subscriber_id %}selected{% endif %}>Select subscriber…</option>
+                {% for s in subscribers %}
+                <option value="{{ s.SubscriberID }}" {% if form.subscriber_id == (s.SubscriberID | string) %}selected{% endif %}>{{ s.Name }} ({{ s.SubscriberType }})</option>
+                {% endfor %}
+            </select>
+        </label>
+        {% endif %}
+
+        <div class="form-field">
+            <span class="form-label">Stations</span>
+            {{ station_picker(stations, selected_ids=(form.station_ids or []), field_id="commercial-stations") }}
+        </div>
+
+        <label class="form-field">
+            <span class="form-label">Campaign name / ID</span>
+            <input name="campaign_name" class="form-input" required placeholder="e.g. Clover Milk Q1 2026" value="{{ form.campaign_name or '' }}">
+            <span class="form-hint muted">If this campaign already exists for your account, the commercial is added to it.</span>
+        </label>
+
+        <label class="form-field">
+            <span class="form-label">Tape ID</span>
+            <input name="tape_id" class="form-input" required placeholder="e.g. NCHK_030_1735_E" value="{{ form.tape_id or '' }}">
+            <span class="form-hint muted">Your own naming convention. Must be unique within your account.</span>
+        </label>
+
+        <label class="form-field">
+            <span class="form-label">Brand (optional)</span>
+            <input name="brand" class="form-input" placeholder="e.g. Clover Milk" value="{{ form.brand or '' }}">
+        </label>
+
+        <label class="form-field">
+            <span class="form-label">Commercial type</span>
+            <select name="commercial_type" class="form-input" required>
+                <option value="" disabled {% if not form.commercial_type %}selected{% endif %}>Select…</option>
+                <option value="generic" {% if form.commercial_type == "generic" %}selected{% endif %}>Generic (audio file)</option>
+                <option value="liveread" {% if form.commercial_type == "liveread" %}selected{% endif %}>Liveread (script text)</option>
+            </select>
+        </label>
+
+        <label class="form-field">
+            <span class="form-label">Upload file</span>
+            <input name="upload" type="file" class="form-input" accept=".mp3,.wav,.m4a,.aac,.ogg,.flac,.txt">
+            <span class="form-hint muted">Audio file for generic; .txt script for liveread. Generic audio is converted to mp3.</span>
+        </label>
+
+        <div class="form-row">
+            <label class="form-field">
+                <span class="form-label">Campaign start</span>
+                <input name="start_date" type="date" class="form-input" required value="{{ form.start_date or '' }}">
+            </label>
+            <label class="form-field">
+                <span class="form-label">Campaign end (optional)</span>
+                <input name="end_date" type="date" class="form-input" required value="{{ form.end_date or '' }}">
+            </label>
+        </div>
+
+    <div class="form-field" style="margin-top:0.5rem">
+          <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem">
+            <span class="form-label" style="margin:0">Broadcast schedule</span>
+            <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.8rem;color:var(--muted)">
+              <input type="checkbox" id="enable-schedule" onchange="toggleSchedule(this.checked)"
+                     style="accent-color:var(--cobalt)">
+              Register specific broadcast time slots (optional)
+            </label>
+          </div>
+          <div id="schedule-wrap" style="display:none">
+            <div id="all-days-wrap" style="display:none;margin-bottom:0.5rem">
+              <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.8rem;color:var(--muted)">
+                <input type="checkbox" id="all-days" onchange="toggleAllDays(this.checked)" style="accent-color:var(--cobalt)">
+                Same time slots every day in campaign period
+              </label>
+            </div>
+            <div id="schedule-hint-single" class="form-hint" style="margin-bottom:0.5rem;display:none">
+              Day locked to match your campaign start date. Add your broadcast time slots.
+            </div>
+            <div id="schedule-hint-multi" class="form-hint" style="margin-bottom:0.5rem;display:none">
+              Add one row per day your commercial is booked to air — days without a row are excluded.<br>
+              Multiple rows on the same day = multiple airtime slots that day.<br>
+              Detections outside registered slots are highlighted for review.
+            </div>
+            <div id="schedule-rows"></div>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="addScheduleRow()"
+                    style="margin-top:0.5rem">+ Add time slot</button>
+          </div>
+        </div>
+	
+        <fieldset class="form-field terms-gate">
+            <legend class="form-label">Terms &amp; conditions</legend>
+            <div class="terms-text card">{{ terms_text }}</div>
+            <label class="checkbox-label terms-confirm">
+                <input type="checkbox" name="terms_agreed" value="1" required>
+                <strong>I confirm the above statement and agree to these terms.</strong>
+            </label>
+        </fieldset>
+
+	<div class="card" id="cost-preview" style="background:rgba(26,79,168,0.08);border:1px solid rgba(26,79,168,0.2);margin-bottom:var(--space-3);display:none">
+            <p class="muted small" style="margin:0">
+                <strong>Estimated cost:</strong>
+                <span id="cost-value">—</span> credits
+                &nbsp;·&nbsp;
+                <span id="cost-currency" data-zar="" data-usd="" style="font-weight:600;color:var(--white)"></span>
+                <span id="cost-breakdown" class="muted" style="font-size:0.85em"></span>
+            </p>
+            <p class="muted small" style="margin-top:4px">
+                Your credit balance: <strong id="user-balance">{{ token_balance }}</strong> credits
+            </p>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Register commercial</button>
+            <a href="/dashboard" class="btn btn-ghost">Cancel</a>
+        </div>
+    </form>
+<script>
+window.recalcCost = function() {
+    var stations = document.querySelectorAll("#commercial-stations input[type=checkbox]:checked").length;
+    var startVal = document.querySelector("[name=start_date]") ? document.querySelector("[name=start_date]").value : "";
+    var endVal   = document.querySelector("[name=end_date]")   ? document.querySelector("[name=end_date]").value   : "";
+    if (!stations) { document.getElementById("cost-preview").style.display="none"; return; }
+    var days = 30;
+    if (startVal && endVal) {
+        var diff = (new Date(endVal) - new Date(startVal)) / 86400000;
+        days = Math.max(1, Math.round(diff) + 1);
+    }
+    var schedHours = (typeof getScheduledHours !== 'undefined') ? getScheduledHours() : null;
+    var hoursPerDay = (schedHours !== null && schedHours > 0) ? schedHours : 24;
+    var cost = stations * days * hoursPerDay;
+    var zarPerToken = {{ rp_zar_per_token }};
+    var fxRate = {{ rp_fx_rate }};
+    var zarTotal = (cost * zarPerToken).toFixed(2);
+    var usdTotal = (cost * zarPerToken / fxRate).toFixed(2);
+    var zarFmt = "R " + parseFloat(zarTotal).toLocaleString("en-ZA", {minimumFractionDigits:2, maximumFractionDigits:2});
+    var usdFmt = "$ " + parseFloat(usdTotal).toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2});
+    var label = (startVal && endVal) ? days + " day" + (days===1?"":"s") : "30 days (open-ended)";
+    var currEl = document.getElementById("cost-currency");
+    currEl.dataset.zar = zarFmt;
+    currEl.dataset.usd = usdFmt;
+    var activeCur = (document.cookie.split(';').map(function(c){return c.trim();}).filter(function(c){return c.startsWith('currency=');})[0] || 'currency=ZAR').split('=')[1];
+    currEl.textContent = activeCur === 'USD' ? usdFmt : zarFmt;
+    document.getElementById("cost-value").textContent = cost.toLocaleString("en-ZA", {maximumFractionDigits:0});
+    document.getElementById("cost-breakdown").textContent = " (" + stations + " station" + (stations===1?"":"s") + " \xd7 " + label + ")";
+    document.getElementById("cost-preview").style.display = "";
+};
+["start_date","end_date"].forEach(function(n) {
+    var el = document.querySelector("[name=" + n + "]");
+    if (el) el.addEventListener("change", window.recalcCost);
+});
+
+var DAY_NAMES=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+
+function getDateInfo() {
+  var df = document.querySelector("[name=start_date]") ? document.querySelector("[name=start_date]").value : "";
+  var dt = document.querySelector("[name=end_date]")   ? document.querySelector("[name=end_date]").value   : "";
+  var single = df && dt && df === dt;
+  var lockedDow = -1;
+  if (single && df) { var d = new Date(df+"T00:00:00"); lockedDow = (d.getDay()+6)%7; }
+  return { single: single, lockedDow: lockedDow };
+}
+function isAllDays() { var cb = document.getElementById("all-days"); return cb && cb.checked; }
+function toggleSchedule(e){
+  document.getElementById("schedule-wrap").style.display=e?"":"none";
+  if(e){ updateScheduleHints(); if(!document.getElementById("schedule-rows").children.length) addScheduleRow(); }
+  else { document.getElementById("schedule-rows").innerHTML=""; }
+  window.recalcCost();
+}
+function toggleAllDays(checked){ document.getElementById("schedule-rows").innerHTML=""; addScheduleRow(); window.recalcCost(); }
+function updateScheduleHints() {
+  var info = getDateInfo();
+  var aw = document.getElementById("all-days-wrap");
+  if(aw) aw.style.display = info.single ? "none" : "";
+  var hs = document.getElementById("schedule-hint-single");
+  var hm = document.getElementById("schedule-hint-multi");
+  if(hs) hs.style.display = info.single ? "" : "none";
+  if(hm) hm.style.display = info.single ? "none" : "";
+}
+function addScheduleRow(){
+  var info=getDateInfo(); var allDays=isAllDays();
+  var w=document.getElementById("schedule-rows");
+  var r=document.createElement("div"); r.className="schedule-row";
+  r.style.cssText="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.4rem;flex-wrap:wrap";
+  if(allDays){
+    r.innerHTML='<input type="hidden" name="schedule_day" value="-1">'
+      +'<input type="time" name="schedule_from" class="form-input" style="flex:0 0 110px;font-size:0.82rem" value="06:00" onchange="window.recalcCost()">'
+      +'<span style="color:var(--muted);font-size:0.82rem">to</span>'
+      +'<input type="time" name="schedule_to" class="form-input" style="flex:0 0 110px;font-size:0.82rem" value="09:00" onchange="window.recalcCost()">'
+      +'<button type="button" onclick="this.parentElement.remove();window.recalcCost();" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:0 4px">&#x2715;</button>';
+  } else if(info.single && info.lockedDow >= 0){
+    r.innerHTML='<input type="hidden" name="schedule_day" value="'+info.lockedDow+'">'
+      +'<span style="flex:0 0 130px;font-size:0.8rem;color:var(--muted)">'+DAY_NAMES[info.lockedDow]+'</span>'
+      +'<input type="time" name="schedule_from" class="form-input" style="flex:0 0 110px;font-size:0.82rem" value="06:00" onchange="window.recalcCost()">'
+      +'<span style="color:var(--muted);font-size:0.82rem">to</span>'
+      +'<input type="time" name="schedule_to" class="form-input" style="flex:0 0 110px;font-size:0.82rem" value="09:00" onchange="window.recalcCost()">'
+      +'<button type="button" onclick="this.parentElement.remove();window.recalcCost();" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:0 4px">&#x2715;</button>';
+  } else {
+    r.innerHTML='<select name="schedule_day" class="form-input" style="flex:0 0 130px;font-size:0.82rem" onchange="window.recalcCost()">'
+      +DAY_NAMES.map(function(d,i){return'<option value="'+i+'">'+d+'</option>';}).join('')
+      +'</select>'
+      +'<input type="time" name="schedule_from" class="form-input" style="flex:0 0 110px;font-size:0.82rem" value="06:00" onchange="window.recalcCost()">'
+      +'<span style="color:var(--muted);font-size:0.82rem">to</span>'
+      +'<input type="time" name="schedule_to" class="form-input" style="flex:0 0 110px;font-size:0.82rem" value="09:00" onchange="window.recalcCost()">'
+      +'<button type="button" onclick="this.parentElement.remove();window.recalcCost();" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:0 4px">&#x2715;</button>';
+  }
+  w.appendChild(r); window.recalcCost();
+}
+function getScheduledHours(){
+  if(!document.getElementById("enable-schedule")||!document.getElementById("enable-schedule").checked) return null;
+  var rows=document.querySelectorAll(".schedule-row"); var t=0;
+  rows.forEach(function(r){var f=r.querySelector("[name=schedule_from]").value;var e=r.querySelector("[name=schedule_to]").value;if(f&&e&&e>f){var fm=parseInt(f.split(":")[0])*60+parseInt(f.split(":")[1]);var tm=parseInt(e.split(":")[0])*60+parseInt(e.split(":")[1]);t+=(tm-fm)/60;}});
+  return t;
+}
+["start_date","end_date"].forEach(function(n){
+  var el=document.querySelector("[name="+n+"]");
+  if(el) el.addEventListener("change",function(){ updateScheduleHints(); window.recalcCost(); });
+});
+</script>
+{% endblock %}

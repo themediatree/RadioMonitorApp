@@ -1,0 +1,56 @@
+{% extends "base_app.html" %}
+{% block title %}Invitations — RadioMonitor{% endblock %}
+{% block topbar_title %}Invitations{% endblock %}
+{% block content %}
+    <header class="page-header">
+        <h1>Invitations</h1>
+        <p class="muted">Invite new users by email. They set their own password via the accept link.</p>
+        <a href="/admin/invitations/new" class="btn btn-primary">Invite a user</a>
+    </header>
+
+    {% if invitations %}
+    <div class="table-scroll"><table class="data-table">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Expires</th>
+                <th>Link</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for inv in invitations %}
+            <tr>
+                <td>{{ inv.Email }}</td>
+                <td>{{ inv.UserType.replace('_', ' ') | title }}</td>
+                <td>
+                    {% if inv.is_accepted %}
+                        <span class="badge badge-active">accepted</span>
+                    {% elif inv.is_expired %}
+                        <span class="badge badge-withdrawn">expired</span>
+                    {% else %}
+                        <span class="badge badge-pending">pending</span>
+                    {% endif %}
+                </td>
+                <td class="muted">{{ inv.ExpiresAt.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                    {% if not inv.is_accepted and not inv.is_expired %}
+                    <button class="btn btn-ghost btn-sm"
+                            onclick="navigator.clipboard.writeText('{{ request.base_url }}accept-invite?token={{ inv.Token }}').then(()=>this.textContent='Copied!').catch(()=>this.textContent='Failed')">
+                        Copy link
+                    </button>
+                    {% else %}
+                        <span class="muted">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+    {% else %}
+    <div class="card placeholder">
+        <p class="muted">No invitations yet.</p>
+    </div>
+    {% endif %}
+{% endblock %}

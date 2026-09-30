@@ -1,0 +1,65 @@
+{% extends "base_app.html" %}
+{% from "macros/station_picker.html" import station_picker %}
+{% block title %}My Transcriptions — NOCTIV{% endblock %}
+{% block topbar_title %}Transcriptions{% endblock %}
+{% block content %}
+<div class="page-eyebrow">Transcriptions</div>
+<header class="page-header">
+  <h1>My transcriptions</h1>
+  <a href="/transcriptions/request" class="btn btn-primary">Request transcription</a>
+</header>
+
+{% if rows %}
+<div class="table-scroll"><table class="data-table">
+  <thead><tr><th>Station</th><th>Date range</th><th>Time range</th><th>Format</th><th>Status</th><th>Chunks</th><th>Credits</th><th>Source</th><th>Requested</th><th></th></tr></thead>
+  <tbody>
+  {% for req in rows %}
+  <tr>
+    <td>{{ station_map.get(req.StationID, req.StationID) }}</td>
+    <td class="muted">{{ req.DateFrom }} → {{ req.DateTo }}</td>
+    <td class="muted">
+      {% if req.ScheduleJson %}
+        {% set sched = req.ScheduleJson | tojson if req.ScheduleJson is string else req.ScheduleJson %}
+        Schedule
+      {% elif req.TimeFrom and req.TimeTo %}
+        {{ req.TimeFrom }} – {{ req.TimeTo }}
+      {% else %}
+        Full day
+      {% endif %}
+    </td>
+    <td><span class="badge badge-pending">{{ req.OutputFormat }}</span></td>
+    <td>
+      {% if req.Status == 'ready' %}<span class="badge badge-active">Ready</span>
+      {% elif req.Status == 'partial' %}<span class="badge badge-pending">Partial</span>
+      {% else %}<span class="badge badge-withdrawn">Pending</span>{% endif %}
+    </td>
+    <td class="muted">{{ req.ChunkCount or "—" }}</td>
+    <td class="muted">{{ "%g"|format(req.TokensDebited|float) }}</td>
+    <td><span class="badge badge-{{ 'pending' if req.Source == 'api' else 'active' }}">{{ req.Source }}</span></td>
+    <td class="muted small">{{ req.CreatedAt.strftime("%Y-%m-%d %H:%M") }}</td>
+    <td>
+      {% if req.Status in ('ready', 'partial') %}
+      <a href="/transcriptions/{{ req.RequestID }}" class="nav-link">View</a>
+      {% else %}
+      <span class="muted small">—</span>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+
+{% if total_pages > 1 %}
+<div class="pagination" style="margin-top:1rem">
+  {% if page > 1 %}<a href="/transcriptions?page={{ page-1 }}" class="btn btn-ghost">‹ Previous</a>{% endif %}
+  <span class="muted small">Page {{ page }} of {{ total_pages }}</span>
+  {% if page < total_pages %}<a href="/transcriptions?page={{ page+1 }}" class="btn btn-ghost">Next ›</a>{% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="card placeholder">
+  <p>No transcription requests yet. <a href="/transcriptions/request" class="nav-link">Request your first transcription</a>.</p>
+</div>
+{% endif %}
+{% endblock %}

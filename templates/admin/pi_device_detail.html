@@ -1,0 +1,201 @@
+{% extends "base_app.html" %}
+{% block title %}{{ device.DeviceName }} — Pi Device{% endblock %}
+{% block topbar_title %}{{ device.DeviceName }}{% endblock %}
+
+{% block content %}
+<header class="page-header">
+  <div style="display:flex;align-items:center;gap:1rem">
+    <div class="pi-status-orb" style="background:{{ device.status_colour }}"></div>
+    <div>
+      <h1>{{ device.DeviceName }}</h1>
+      <div style="font-size:0.78rem;color:var(--muted)">
+        {{ device.status_label }} · Last seen {{ device.last_seen_ago }}
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;gap:0.75rem">
+    <a href="/admin/pi-devices/{{ device.PiDeviceID }}/edit" class="btn btn-ghost">Edit</a>
+    <a href="/admin/pi-devices" class="btn btn-ghost">← All Devices</a>
+  </div>
+</header>
+
+<!-- STATUS INDICATORS -->
+<div class="pi-status-bar">
+  <div class="pi-status-item {% if device.InternetConnected %}pi-ok{% elif device.InternetConnected == false %}pi-err{% else %}pi-unk{% endif %}">
+    <span class="pi-status-icon">🌐</span>
+    <div>
+      <div class="pi-status-label">Internet</div>
+      <div class="pi-status-val">
+        {% if device.InternetConnected is none %}Unknown
+        {% elif device.InternetConnected %}Up ({{ device.InternetSource or '—' }})
+        {% else %}Down
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="pi-status-item {% if device.FmSignal %}pi-ok{% elif device.FmSignal == false %}pi-err{% else %}pi-unk{% endif %}">
+    <span class="pi-status-icon">📡</span>
+    <div>
+      <div class="pi-status-label">FM Signal</div>
+      <div class="pi-status-val">
+        {% if device.FmSignal is none %}Unknown
+        {% elif device.FmSignal %}Present{% if device.Frequency %} · {{ "%.3f"|format(device.Frequency) }} MHz{% endif %}
+        {% else %}No signal
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="pi-status-item {% if device.StreamActive %}pi-ok{% elif device.StreamActive == false %}pi-err{% else %}pi-unk{% endif %}">
+    <span class="pi-status-icon">🎙️</span>
+    <div>
+      <div class="pi-status-label">Stream</div>
+      <div class="pi-status-val">
+        {% if device.StreamActive is none %}Unknown
+        {% elif device.StreamActive %}Active
+        {% else %}Inactive
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="pi-status-item {% if device.PowerSource in ['mains','UPS'] %}pi-ok{% elif device.PowerSource %}pi-warn{% else %}pi-unk{% endif %}">
+    <span class="pi-status-icon">⚡</span>
+    <div>
+      <div class="pi-status-label">Power</div>
+      <div class="pi-status-val">{{ device.PowerSource|capitalize if device.PowerSource else 'Unknown' }}</div>
+    </div>
+  </div>
+  <div class="pi-status-item pi-unk">
+    <span class="pi-status-icon">⏱️</span>
+    <div>
+      <div class="pi-status-label">Uptime</div>
+      <div class="pi-status-val">{{ device.Uptime or 'Unknown' }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL CARDS -->
+<div class="pi-detail-grid">
+
+  <div class="card">
+    <h3>Device Info</h3>
+    <table class="detail-table">
+      <tr><td>Device ID</td><td><code>{{ device.PiDeviceID }}</code></td></tr>
+      <tr><td>Device Name</td><td>{{ device.DeviceName }}</td></tr>
+      <tr><td>WireGuard VPN IP</td><td><code>{{ device.VpnIP }}</code></td></tr>
+      <tr><td>Station</td><td>{{ device.station.StationName if device.station else '— not assigned —' }}</td></tr>
+      <tr><td>Frequency</td><td>{{ "%.3f MHz"|format(device.Frequency) if device.Frequency else '—' }}</td></tr>
+      <tr><td>Power Source</td><td>{{ device.PowerSource|capitalize if device.PowerSource else '—' }}</td></tr>
+      <tr><td>Status</td><td>
+        <span style="color:{{ device.status_colour }}">{{ device.status_label }}</span>
+      </td></tr>
+      <tr><td>Active</td><td>{{ 'Yes' if device.IsActive else 'No' }}</td></tr>
+      <tr><td>Created</td><td style="font-family:var(--mono);font-size:0.78rem">
+        {{ device.CreatedAt.strftime('%d %b %Y %H:%M') if device.CreatedAt else '—' }}
+      </td></tr>
+      <tr><td>Last Seen</td><td style="font-family:var(--mono);font-size:0.78rem">
+        {{ device.LastSeen.strftime('%d %b %Y %H:%M:%S') if device.LastSeen else 'Never' }}
+      </td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>API Key</h3>
+    <p class="muted small" style="margin-bottom:0.75rem">
+      The Pi agent sends this key in every heartbeat request as a
+      <code>Authorization: Bearer &lt;key&gt;</code> header.
+      Rotating generates a new key — update the Pi agent config after rotating.
+    </p>
+    <div class="api-key-box">
+      <code id="api-key-val">{{ device.ApiKey }}</code>
+      <button type="button" class="btn btn-ghost btn-sm"
+              onclick="navigator.clipboard.writeText('{{ device.ApiKey }}').then(function(){this.textContent='Copied!';setTimeout(function(){document.querySelector('[onclick]').textContent='Copy'},1500)}.bind(this))"
+              style="flex-shrink:0">Copy</button>
+    </div>
+    <form method="post" action="/admin/pi-devices/{{ device.PiDeviceID }}/rotate-key"
+          style="margin-top:0.75rem"
+          onsubmit="return confirm('Rotate API key? The Pi agent will stop working until updated with the new key.')">
+      <button type="submit" class="btn btn-ghost btn-sm"
+              style="color:var(--red);border-color:rgba(220,38,38,0.3)">
+        Rotate Key
+      </button>
+    </form>
+
+    {% if device.StreamUrl %}
+    <h3 style="margin-top:1.5rem">Stream URL</h3>
+    <div style="font-family:var(--mono);font-size:0.75rem;color:var(--pale);word-break:break-all;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:0.75rem">
+      {{ device.StreamUrl }}
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- DANGER ZONE -->
+<div class="card" style="margin-top:1rem;border-left:4px solid rgba(220,38,38,0.4)">
+  <h3 style="color:var(--red)">Device Actions</h3>
+  <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:0.75rem">
+    <form method="post" action="/admin/pi-devices/{{ device.PiDeviceID }}/toggle"
+          onsubmit="return confirm('{{ 'Disable' if device.IsActive else 'Enable' }} {{ device.DeviceName }}?')">
+      <button type="submit" class="btn btn-ghost"
+              style="{% if device.IsActive %}color:var(--red);border-color:rgba(220,38,38,0.3){% endif %}">
+        {{ 'Disable Device' if device.IsActive else 'Enable Device' }}
+      </button>
+    </form>
+  </div>
+</div>
+
+<style>
+.pi-status-orb {
+  width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
+  box-shadow: 0 0 10px currentColor;
+}
+.pi-status-bar {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem; margin-bottom: 1.5rem;
+}
+.pi-status-item {
+  display: flex; gap: 0.75rem; align-items: center;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(192,207,224,0.07);
+  border-radius: 10px; padding: 0.9rem 1rem;
+}
+.pi-status-item.pi-ok   { border-color: rgba(74,222,128,0.2); }
+.pi-status-item.pi-err  { border-color: rgba(248,113,113,0.2); }
+.pi-status-item.pi-warn { border-color: rgba(250,204,21,0.2); }
+.pi-status-icon { font-size: 1.4rem; flex-shrink: 0; }
+.pi-status-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.pi-status-val   { font-size: 0.85rem; font-weight: 600; color: var(--white); margin-top: 1px; }
+.pi-detail-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.detail-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+.detail-table td { padding: 0.45rem 0; border-bottom: 1px solid rgba(192,207,224,0.06); }
+.detail-table td:first-child { color: var(--muted); width: 40%; }
+.api-key-box {
+  display: flex; gap: 0.75rem; align-items: center;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(192,207,224,0.08);
+  border-radius: 8px; padding: 0.65rem 0.85rem;
+  font-size: 0.78rem;
+}
+.api-key-box code { flex: 1; word-break: break-all; font-family: var(--mono); color: var(--pale); }
+@media (max-width: 700px) { .pi-detail-grid { grid-template-columns: 1fr; } }
+</style>
+
+{% block scripts %}
+<script>
+// Auto-refresh status indicators every 15 seconds
+function refreshThisDevice() {
+  fetch('/api/admin/pi-devices/status')
+    .then(function(r) { return r.json(); })
+    .then(function(devices) {
+      var d = devices.find(function(x) { return x.id === {{ device.PiDeviceID }}; });
+      if (!d) return;
+      // Update orb colour
+      document.querySelector('.pi-status-orb').style.background = d.status_colour;
+    })
+    .catch(function() {});
+}
+setInterval(refreshThisDevice, 15000);
+</script>
+{% endblock %}
+
+{% endblock %}

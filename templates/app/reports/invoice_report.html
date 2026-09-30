@@ -1,0 +1,387 @@
+{% extends "base_app.html" %}
+{% block title %}Invoice Report — NOCTIV{% endblock %}
+{% block topbar_title %}Invoice Report{% endblock %}
+
+{% block content %}
+<style>
+.report-eyebrow {
+  font-family: var(--mono); font-size: 0.62rem;
+  color: var(--glow); letter-spacing: 0.18em;
+  text-transform: uppercase; margin-bottom: 0.4rem;
+}
+.report-hero {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 1.5rem;
+  margin-bottom: 2rem; flex-wrap: wrap;
+}
+.report-hero h1 {
+  font-family: var(--display); font-size: 1.75rem;
+  font-weight: 800; color: var(--white);
+  letter-spacing: -0.02em; line-height: 1.1;
+}
+.report-hero-meta { font-size: 0.78rem; color: var(--muted); margin-top: 0.4rem; }
+.report-hero-actions { display: flex; gap: 0.5rem; flex-shrink: 0; align-items: flex-start; }
+
+.filter-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 1.25rem; margin-bottom: 1.75rem;
+}
+.filter-card-title {
+  font-family: var(--mono); font-size: 0.65rem;
+  color: var(--muted); letter-spacing: 0.12em;
+  text-transform: uppercase; margin-bottom: 1rem;
+}
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem; align-items: end;
+}
+
+/* Account summary banner */
+.account-banner {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.75rem;
+  display: flex; align-items: center;
+  justify-content: space-between; gap: 2rem; flex-wrap: wrap;
+}
+.account-banner-name {
+  font-family: var(--display); font-size: 1.1rem;
+  font-weight: 700; color: var(--white);
+}
+.account-banner-sub {
+  font-family: var(--mono); font-size: 0.68rem;
+  color: var(--muted); margin-top: 0.2rem;
+}
+.account-balance-group { display: flex; gap: 2rem; }
+.account-balance-item { text-align: right; }
+.account-balance-label {
+  font-family: var(--mono); font-size: 0.62rem;
+  color: var(--muted); letter-spacing: 0.1em;
+  text-transform: uppercase; margin-bottom: 0.2rem;
+}
+.account-balance-value {
+  font-family: var(--mono); font-size: 1.25rem;
+  font-weight: 500; color: var(--white);
+}
+.account-balance-zar { font-size: 0.72rem; color: var(--muted); margin-top: 0.1rem; }
+
+/* Stat strip */
+.stat-strip {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1rem; margin-bottom: 1.75rem;
+}
+.stat-strip-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 1rem 1.25rem;
+  position: relative; overflow: hidden;
+}
+.stat-strip-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, #22c55e, #00e676);
+}
+.stat-strip-card.accent-red::before    { background: linear-gradient(90deg, #ef4444, #f87171); }
+.stat-strip-card.accent-blue::before   { background: linear-gradient(90deg, var(--cobalt), var(--glow)); }
+.stat-strip-card.accent-purple::before { background: linear-gradient(90deg, #7c4dff, #b388ff); }
+.stat-strip-label {
+  font-family: var(--mono); font-size: 0.62rem;
+  color: var(--muted); letter-spacing: 0.1em;
+  text-transform: uppercase; margin-bottom: 0.5rem;
+}
+.stat-strip-value {
+  font-family: var(--mono); font-size: 1.75rem;
+  font-weight: 500; color: var(--white); line-height: 1;
+}
+.stat-strip-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; }
+
+/* Transaction table */
+.results-panel {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+}
+.results-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);
+}
+.results-header-title {
+  font-family: var(--display); font-size: 0.9rem;
+  font-weight: 600; color: var(--white);
+}
+.results-count { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); }
+
+.tx-type-usage      { background: rgba(239,68,68,0.12);  color: #f87171; }
+.tx-type-topup      { background: rgba(34,197,94,0.12);  color: #4ade80; }
+.tx-type-refund     { background: rgba(45,107,228,0.12); color: #4a8eff; }
+.tx-type-adjustment { background: rgba(192,207,224,0.1); color: var(--chrome); }
+
+.ref-pill {
+  font-family: var(--mono); font-size: 0.65rem;
+  border-radius: 4px; padding: 2px 7px;
+  background: rgba(124,77,255,0.12); color: #b388ff;
+}
+
+.credit-debit   { color: #f87171; font-family: var(--mono); font-size: 0.82rem; }
+.credit-topup   { color: #4ade80; font-family: var(--mono); font-size: 0.82rem; }
+.credit-neutral { color: var(--chrome); font-family: var(--mono); font-size: 0.82rem; }
+
+/* Category breakdown */
+.breakdown-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1rem; margin-top: 1.75rem;
+}
+.breakdown-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+}
+.breakdown-header {
+  padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--border);
+  font-family: var(--mono); font-size: 0.65rem;
+  color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase;
+}
+.breakdown-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.6rem 1.25rem;
+  border-bottom: 1px solid rgba(192,207,224,0.04);
+}
+.breakdown-row:last-child { border-bottom: none; }
+.breakdown-name { font-size: 0.82rem; color: var(--pale); flex: 1; }
+.breakdown-bar-wrap { display: flex; align-items: center; gap: 0.6rem; width: 140px; flex-shrink: 0; }
+.breakdown-bar { height: 6px; border-radius: 3px; background: rgba(34,197,94,0.12); flex: 1; overflow: hidden; }
+.breakdown-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #16a34a, #4ade80); }
+.breakdown-count { font-family: var(--mono); font-size: 0.72rem; color: var(--chrome); width: 50px; text-align: right; flex-shrink: 0; }
+
+.empty-state { text-align: center; padding: 4rem 2rem; color: var(--muted); }
+.empty-state-icon { font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.4; }
+.empty-state-title { font-family: var(--display); font-size: 1rem; color: var(--chrome); margin-bottom: 0.4rem; }
+</style>
+
+<div class="report-eyebrow">Reports / Billing & Usage</div>
+<div class="report-hero">
+  <div>
+    <h1>Invoice Report</h1>
+    <div class="report-hero-meta">
+      Credit usage and transaction history for your account
+      {% if result %}· Generated {{ result.generated_at.strftime("%d %b %Y %H:%M") }} UTC{% endif %}
+    </div>
+  </div>
+  <div class="report-hero-actions">
+    {% if result and result.rows %}
+    <a href="/reports/invoice/pdf?{{ request.query_string.decode() }}"
+       class="btn btn-primary" target="_blank">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Export PDF
+    </a>
+    {% endif %}
+    <a href="/reports" class="btn btn-ghost">← All Reports</a>
+  </div>
+</div>
+
+<!-- FILTER CARD -->
+<div class="filter-card">
+  <div class="filter-card-title">Filter</div>
+  <form method="get" action="/reports/invoice">
+    <div class="filter-grid">
+      <div class="form-field">
+        <label class="form-label">From</label>
+        <input type="date" name="date_from" class="form-input" value="{{ filters.date_from or '' }}">
+      </div>
+      <div class="form-field">
+        <label class="form-label">To</label>
+        <input type="date" name="date_to" class="form-input" value="{{ filters.date_to or '' }}">
+      </div>
+      <div class="form-field" style="align-self:end">
+        <button type="submit" class="btn btn-primary" style="width:100%">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          Run Report
+        </button>
+      </div>
+      <div class="form-field" style="align-self:end">
+        <a href="/reports/invoice?all=1" class="btn btn-ghost" style="width:100%;text-align:center">
+          All Transactions
+        </a>
+      </div>
+    </div>
+  </form>
+</div>
+
+{% if result %}
+
+<!-- ACCOUNT BANNER -->
+<div class="account-banner">
+  <div>
+    <div class="account-banner-name">{{ result.subscriber_name }}</div>
+    <div class="account-banner-sub">
+      Rate: {{ result.zar_per_token }} ZAR per credit ·
+      Period: {{ result.date_from.strftime("%d %b %Y") if result.date_from else "All time" }}
+      {% if result.date_to %} – {{ result.date_to.strftime("%d %b %Y") }}{% endif %}
+    </div>
+  </div>
+  <div class="account-balance-group">
+    <div class="account-balance-item">
+      <div class="account-balance-label">Opening Balance</div>
+      <div class="account-balance-value">{{ "%.2f"|format(result.opening_balance) }}</div>
+      <div class="account-balance-zar">R {{ "%.2f"|format(result.opening_balance * result.zar_per_token) }}</div>
+    </div>
+    <div class="account-balance-item">
+      <div class="account-balance-label">Closing Balance</div>
+      <div class="account-balance-value">{{ "%.2f"|format(result.closing_balance) }}</div>
+      <div class="account-balance-zar">R {{ "%.2f"|format(result.closing_balance * result.zar_per_token) }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- SUMMARY STRIP -->
+<div class="stat-strip">
+  <div class="stat-strip-card">
+    <div class="stat-strip-label">Credits Top-up</div>
+    <div class="stat-strip-value">{{ "%.2f"|format(result.total_credited) }}</div>
+    <div class="stat-strip-sub">R {{ "%.2f"|format(result.total_credited * result.zar_per_token) }} value</div>
+  </div>
+  <div class="stat-strip-card accent-red">
+    <div class="stat-strip-label">Credits Used</div>
+    <div class="stat-strip-value">{{ "%.2f"|format(result.total_debited) }}</div>
+    <div class="stat-strip-sub">R {{ "%.2f"|format(result.total_zar) }} value</div>
+  </div>
+  <div class="stat-strip-card accent-blue">
+    <div class="stat-strip-label">Transactions</div>
+    <div class="stat-strip-value">{{ result.total }}</div>
+    <div class="stat-strip-sub">in selected period</div>
+  </div>
+  <div class="stat-strip-card accent-purple">
+    <div class="stat-strip-label">Rate</div>
+    <div class="stat-strip-value" style="font-size:1.1rem;padding-top:0.3rem">
+      R {{ "%.2f"|format(result.zar_per_token) }}
+    </div>
+    <div class="stat-strip-sub">per credit (ZAR)</div>
+  </div>
+</div>
+
+{% if result.rows %}
+
+<!-- TRANSACTION TABLE -->
+<div class="results-panel">
+  <div class="results-header">
+    <div class="results-header-title">Transaction Log</div>
+    <div class="results-count">{{ result.total }} transaction{{ 's' if result.total != 1 else '' }}</div>
+  </div>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Description</th>
+          <th>Category</th>
+          <th>Type</th>
+          <th style="text-align:right">Credits</th>
+          <th style="text-align:right">ZAR (R)</th>
+          <th style="text-align:right">Balance</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in result.rows %}
+        <tr>
+          <td class="nowrap" style="font-family:var(--mono);font-size:0.75rem;color:var(--muted)">
+            {{ row.created_at.strftime("%d %b %Y") }}
+          </td>
+          <td style="font-size:0.82rem;color:var(--pale);max-width:260px">{{ row.description }}</td>
+          <td><span class="ref-pill">{{ row.reference_type }}</span></td>
+          <td>
+            <span class="badge
+              {% if row.type_label == 'Usage' %}tx-type-usage
+              {% elif row.type_label == 'Top-up' %}tx-type-topup
+              {% elif row.type_label == 'Refund' %}tx-type-refund
+              {% else %}tx-type-adjustment{% endif %}">
+              {{ row.type_label }}
+            </span>
+          </td>
+          <td style="text-align:right">
+            {% if row.is_debit %}
+            <span class="credit-debit">−{{ "%.2f"|format(row.credits) }}</span>
+            {% else %}
+            <span class="credit-topup">+{{ "%.2f"|format(row.credits) }}</span>
+            {% endif %}
+          </td>
+          <td style="text-align:right">
+            {% if row.is_debit %}
+            <span class="credit-debit" style="font-size:0.75rem">R {{ "%.2f"|format(row.zar_amount) }}</span>
+            {% else %}
+            <span class="credit-neutral" style="font-size:0.75rem">—</span>
+            {% endif %}
+          </td>
+          <td style="text-align:right">
+            <span class="credit-neutral">{{ "%.2f"|format(row.balance_after) }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- BREAKDOWN -->
+{% if result.by_category %}
+<div class="breakdown-grid">
+  <div class="breakdown-card">
+    <div class="breakdown-header">Credits Used by Category</div>
+    {% set max_c = result.by_category.values() | list | max %}
+    {% for name, amount in result.by_category.items() %}
+    <div class="breakdown-row">
+      <div class="breakdown-name">{{ name }}</div>
+      <div class="breakdown-bar-wrap">
+        <div class="breakdown-bar">
+          <div class="breakdown-bar-fill" style="width:{{ ((amount / max_c) * 100)|int }}%"></div>
+        </div>
+        <div class="breakdown-count">{{ "%.1f"|format(amount) }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="breakdown-card">
+    <div class="breakdown-header">ZAR Spend by Category</div>
+    {% set max_z = result.by_category.values() | list | max %}
+    {% for name, amount in result.by_category.items() %}
+    <div class="breakdown-row">
+      <div class="breakdown-name">{{ name }}</div>
+      <div class="breakdown-bar-wrap">
+        <div class="breakdown-bar">
+          <div class="breakdown-bar-fill" style="width:{{ ((amount / max_z) * 100)|int }}%"></div>
+        </div>
+        <div class="breakdown-count" style="width:70px">R {{ "%.2f"|format(amount * result.zar_per_token) }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="results-panel">
+  <div class="empty-state">
+    <div class="empty-state-icon">📭</div>
+    <div class="empty-state-title">No transactions found</div>
+    <p class="muted small" style="margin-top:0.4rem">No transactions in the selected period.</p>
+  </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="results-panel">
+  <div class="empty-state">
+    <div class="empty-state-icon" style="opacity:0.5">🧾</div>
+    <div class="empty-state-title">Set your filters and run the report</div>
+    <p class="muted small" style="margin-top:0.4rem">
+      Select a date range above, then click <strong style="color:var(--chrome)">Run Report</strong>,
+      or click <strong style="color:var(--chrome)">All Transactions</strong> to see your full history.
+    </p>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}NOCTIV{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── RESET + ROOT ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:        #080d1a;
+  --sidebar:   #0b1120;
+  --card:      #111a30;
+  --card-h:    #151f38;
+  --border:    rgba(192,207,224,0.08);
+  --border-h:  rgba(74,142,255,0.35);
+  --cobalt:    #2d6be4;
+  --glow:      #4a8eff;
+  --chrome:    #c0cfe0;
+  --muted:     #7a93b8;
+  --white:     #ffffff;
+  --pale:      #dce8f8;
+  --green:     #00c853;
+  --red:       #ff1744;
+  --display:   'DM Sans', sans-serif;
+  --body:      'Inter', sans-serif;
+  --mono:      'JetBrains Mono', monospace;
+  --sidebar-w: 220px;
+  --right-w:   260px;
+  --top-h:     56px;
+}
+html { font-size: 15px; scrollbar-width: thin; scrollbar-color: rgba(74,142,255,0.3) transparent; }
+html::-webkit-scrollbar { width: 6px; }
+html::-webkit-scrollbar-track { background: var(--bg); }
+html::-webkit-scrollbar-thumb { background: rgba(74,142,255,0.25); border-radius: 3px; }
+html::-webkit-scrollbar-thumb:hover { background: rgba(74,142,255,0.45); }
+body {
+  background: var(--bg);
+  color: var(--pale);
+  font-family: var(--body);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  display: flex; flex-direction: column;
+}
+
+/* ── TOP BAR ── */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: var(--top-h);
+  background: rgba(8,13,26,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 1.25rem 0 calc(var(--sidebar-w) + 1.25rem);
+  gap: 1rem;
+}
+.topbar-title {
+  font-family: var(--display); font-weight: 700;
+  font-size: 1rem; color: var(--white); flex: 1;
+}
+.topbar-user {
+  display: flex; align-items: center; gap: 0.6rem;
+  font-size: 0.8rem; color: var(--muted);
+}
+.topbar-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--cobalt), var(--glow));
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--display); font-weight: 700;
+  font-size: 0.72rem; color: var(--white);
+}
+.topbar-logout {
+  font-size: 0.75rem; color: var(--muted);
+  text-decoration: none; padding: 4px 10px;
+  border: 1px solid var(--border); border-radius: 5px;
+  transition: border-color 0.2s, color 0.2s;
+}
+.topbar-logout:hover { border-color: var(--red); color: var(--red); }
+.currency-toggle {
+  display: flex; border-radius: 6px; overflow: hidden;
+  border: 1px solid var(--border); background: rgba(255,255,255,0.04);
+}
+.currency-btn {
+  padding: 0.25rem 0.6rem; font-size: 0.72rem; font-weight: 600;
+  font-family: var(--mono); color: var(--muted); background: transparent;
+  border: none; cursor: pointer; transition: background 0.15s, color 0.15s;
+  letter-spacing: 0.04em;
+}
+.currency-btn.active { background: var(--cobalt); color: var(--white); }
+.currency-btn:hover:not(.active) { color: var(--white); }
+
+/* ── LAYOUT SHELL ── */
+.app-shell {
+  display: flex;
+  padding-top: var(--top-h);
+  min-height: 100vh;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  position: fixed; top: var(--top-h); left: 0; bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--sidebar);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow-y: auto; overflow-x: hidden;
+  z-index: 90;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(74,142,255,0.3) transparent;
+}
+.sidebar::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(74,142,255,0.25);
+  border-radius: 3px;
+}
+.sidebar::-webkit-scrollbar-thumb:hover { background: rgba(74,142,255,0.45); }
+.sidebar-logo {
+  padding: 1.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+}
+.sidebar-logo img { height: 90px; width: auto; mix-blend-mode: lighten; }
+.sidebar-section {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-section:last-child { border-bottom: none; }
+.sidebar-label {
+  font-family: var(--mono); font-size: 0.62rem;
+  color: var(--muted); letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.5rem 1rem 0.25rem;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.55rem 0.85rem;
+  color: var(--chrome); font-size: 0.85rem;
+  text-decoration: none; cursor: pointer;
+  position: relative; transition: color 0.15s, background 0.15s, border-color 0.15s;
+  border-left: 2px solid transparent;
+  font-weight: 500;
+}
+.nav-item:hover { color: var(--pale); background: rgba(74,142,255,0.06); }
+.nav-item.active {
+  color: var(--white); background: rgba(45,107,228,0.12);
+  border-left-color: var(--cobalt);
+  font-weight: 600;
+}
+.nav-item svg { width: 15px; height: 15px; flex-shrink: 0; opacity: 0.8; }
+.nav-item.active svg { opacity: 1; }
+
+/* Main nav item: bordered group header, rounded corners */
+.nav-group { margin: 0 0.65rem 0.5rem; }
+.nav-group > .nav-item {
+  border: 1px solid rgba(212,175,55,0.35);
+  border-radius: 8px;
+  padding-left: 0.85rem;
+}
+.nav-group > .nav-item.active {
+  border-color: rgba(212,175,55,0.65);
+}
+.nav-sub {
+  padding-left: 2.2rem;
+}
+.nav-sub .nav-item {
+  font-size: 0.78rem; padding: 0.35rem 1rem 0.35rem 0;
+  border-left: none; color: var(--muted); font-weight: 400;
+}
+.nav-sub .nav-item.active {
+  color: var(--glow); background: none; border-left: none; font-weight: 600;
+}
+.sidebar-bottom {
+  margin-top: auto; padding: 0.75rem 1rem;
+  border-top: 1px solid var(--border);
+}
+.status-dot {
+  display: inline-block; width: 6px; height: 6px;
+  border-radius: 50%; background: var(--green);
+  margin-right: 5px;
+  animation: pulse-dot 2s ease infinite;
+}
+@keyframes pulse-dot {
+  0%,100% { opacity:1; } 50% { opacity:0.3; }
+}
+.pipeline-status {
+  font-family: var(--mono); font-size: 0.68rem;
+  color: var(--muted); display: flex; align-items: center;
+}
+
+/* ── MAIN CONTENT ── */
+.main-content {
+  flex: 1;
+  margin-left: var(--sidebar-w);
+  margin-right: var(--right-w);
+  padding: 1.75rem 1.5rem;
+  min-width: 0;
+}
+
+/* ── RIGHT PANEL ── */
+.right-panel {
+  position: fixed; top: var(--top-h); right: 0; bottom: 0;
+  width: var(--right-w);
+  background: var(--sidebar);
+  border-left: 1px solid var(--border);
+  overflow-y: auto; padding: 1.25rem 1rem;
+  display: flex; flex-direction: column; gap: 1.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(74,142,255,0.3) transparent;
+}
+.right-panel::-webkit-scrollbar { width: 6px; }
+.right-panel::-webkit-scrollbar-track { background: transparent; }
+.right-panel::-webkit-scrollbar-thumb {
+  background: rgba(74,142,255,0.25);
+  border-radius: 3px;
+}
+.right-panel::-webkit-scrollbar-thumb:hover { background: rgba(74,142,255,0.45); }
+.rp-section { }
+.rp-label {
+  font-family: var(--mono); font-size: 0.62rem;
+  color: var(--muted); letter-spacing: 0.14em;
+  text-transform: uppercase; margin-bottom: 0.6rem;
+}
+.rp-balance {
+  background: linear-gradient(135deg, rgba(45,107,228,0.2), rgba(74,142,255,0.08));
+  border: 1px solid rgba(74,142,255,0.2);
+  border-radius: 10px; padding: 1rem;
+}
+.rp-balance-num {
+  font-family: var(--mono); font-size: 1.8rem;
+  font-weight: 500; color: var(--white); line-height: 1;
+}
+.rp-balance-label {
+  font-size: 0.72rem; color: var(--muted); margin-top: 0.25rem;
+}
+.rp-stat {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+}
+.rp-stat:last-child { border-bottom: none; }
+.rp-stat-label { color: var(--muted); }
+.rp-stat-value { font-family: var(--mono); color: var(--white); font-size: 0.78rem; }
+.rp-action {
+  display: block; padding: 0.6rem 0.75rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 8px; text-decoration: none;
+  color: var(--chrome); font-size: 0.8rem;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  display: flex; align-items: center; gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+.rp-action:hover {
+  border-color: var(--border-h); color: var(--white);
+  background: rgba(45,107,228,0.08);
+}
+.rp-action svg { width: 13px; height: 13px; opacity: 0.6; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px; padding: 1.25rem;
+}
+.card:hover { border-color: var(--border-h); }
+
+/* ── PAGE HEADER ── */
+.page-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap;
+}
+.page-header h1 {
+  font-family: var(--display); font-size: 1.4rem;
+  font-weight: 700; color: var(--white); letter-spacing: -0.01em;
+}
+.page-eyebrow {
+  font-family: var(--mono); font-size: 0.62rem;
+  color: var(--glow); letter-spacing: 0.14em;
+  text-transform: uppercase; margin-bottom: 0.3rem;
+}
+
+/* ── STAT CARDS (dashboard) ── */
+.stat-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.stat-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 1.1rem 1.25rem;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.stat-card:hover { border-color: var(--border-h); transform: translateY(-2px); }
+.stat-card-label {
+  font-size: 0.72rem; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem;
+}
+.stat-card-value {
+  font-family: var(--mono); font-size: 1.6rem;
+  font-weight: 500; color: var(--white); line-height: 1;
+}
+.stat-card-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; }
+.stat-card-icon {
+  float: right; width: 32px; height: 32px; border-radius: 8px;
+  background: rgba(45,107,228,0.15);
+  display: flex; align-items: center; justify-content: center;
+}
+.stat-card-icon svg { width: 15px; height: 15px; color: var(--glow); }
+
+/* ── DATA TABLE ── */
+.data-table {
+  width: 100%; border-collapse: collapse; font-size: 0.83rem;
+}
+.table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.data-table th {
+  font-family: var(--mono); font-size: 0.65rem;
+  color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 0.6rem 0.75rem; text-align: left;
+  border-bottom: 1px solid var(--border);
+  font-weight: 500;
+}
+.data-table td {
+  padding: 0.65rem 0.75rem; color: var(--pale);
+  border-bottom: 1px solid rgba(192,207,224,0.05);
+}
+.nowrap { white-space: nowrap; }
+.data-table tr:hover td { background: rgba(255,255,255,0.02); }
+.data-table tr:last-child td { border-bottom: none; }
+
+/* ── BADGES ── */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 4px;
+  font-family: var(--mono); font-size: 0.65rem;
+  font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase;
+}
+.badge-active   { background: rgba(0,200,83,0.15);  color: #00c853; }
+.badge-pending  { background: rgba(74,142,255,0.15); color: #4a8eff; }
+.badge-withdrawn{ background: rgba(255,23,68,0.12);  color: #ff5252; }
+.badge-completed{ background: rgba(192,207,224,0.1); color: var(--chrome); }
+.badge-live     { background: rgba(0,200,83,0.15);  color: #00c853; }
+.badge-retrospective { background: rgba(74,142,255,0.12); color: #4a8eff; }
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.5rem 1rem; border-radius: 7px;
+  font-family: var(--body); font-size: 0.82rem; font-weight: 500;
+  text-decoration: none; border: none; cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn-primary { background: var(--cobalt); color: var(--white); }
+.btn-primary:hover { background: var(--glow); }
+.btn-ghost {
+  background: transparent; color: var(--chrome);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { border-color: var(--chrome); color: var(--white); }
+.btn-danger { background: rgba(255,23,68,0.15); color: #ff5252; border: 1px solid rgba(255,23,68,0.25); }
+.btn-danger:hover { background: rgba(255,23,68,0.25); }
+.btn-sm { padding: 0.3rem 0.7rem; font-size: 0.75rem; }
+
+/* ── FORMS ── */
+.form-card { display: flex; flex-direction: column; gap: 1rem; }
+.form-field { display: flex; flex-direction: column; gap: 0.35rem; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.form-label {
+  font-size: 0.75rem; font-weight: 500;
+  color: var(--chrome); letter-spacing: 0.04em;
+}
+.form-input, .form-select, .form-textarea {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 7px; padding: 0.6rem 0.85rem;
+  color: var(--white); font-family: var(--body); font-size: 0.85rem;
+  transition: border-color 0.2s; width: 100%;
+}
+select {
+  color-scheme: dark;
+  /* Applies to every <select> regardless of class (form-input, form-select,
+     or none) -- forces the native dropdown popup, including <option> list,
+     to render in dark colors instead of defaulting to white. Several older
+     pages use class="form-input" on <select> elements rather than
+     "form-select", so this can't be scoped to one class alone. */
+}
+select option {
+  background: var(--sidebar);
+  color: var(--white);
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  outline: none; border-color: var(--cobalt);
+}
+.form-input::placeholder { color: var(--muted); }
+.form-textarea { min-height: 100px; resize: vertical; }
+.form-select option { background: var(--sidebar); color: var(--white); }
+/* (redundant with the universal `select option` rule above, kept for
+   specificity safety in case of future style overrides) */
+.form-hint { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+.form-actions { display: flex; gap: 0.75rem; margin-top: 0.5rem; }
+
+/* ── ALERTS ── */
+.alert {
+  padding: 0.75rem 1rem; border-radius: 8px;
+  font-size: 0.85rem; margin-bottom: 1rem;
+  display: flex; align-items: flex-start; gap: 0.5rem;
+}
+.alert-error   { background: rgba(255,23,68,0.1);  color: #ff5252; border: 1px solid rgba(255,23,68,0.2); }
+.alert-success { background: rgba(0,200,83,0.1);   color: #00c853; border: 1px solid rgba(0,200,83,0.2); }
+.alert-info    { background: rgba(74,142,255,0.1); color: #4a8eff; border: 1px solid rgba(74,142,255,0.2); }
+
+/* ── FILTER BAR ── */
+.filter-bar {
+  display: flex; gap: 0.75rem; flex-wrap: wrap;
+  align-items: flex-end; margin-bottom: 1.25rem;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 1rem;
+}
+.filter-bar .form-field { flex: 1; min-width: 140px; }
+.filter-actions { display: flex; gap: 0.5rem; align-items: flex-end; padding-bottom: 1px; }
+
+/* ── CHECKBOX GRID ── */
+.checkbox-grid {
+  display: flex; flex-wrap: wrap; gap: 0.4rem;
+  max-height: 180px; overflow-y: auto;
+  padding: 0.5rem; background: rgba(0,0,0,0.2);
+  border-radius: 6px; border: 1px solid var(--border);
+}
+.checkbox-label {
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: 0.78rem; color: var(--chrome);
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border); border-radius: 5px;
+  cursor: pointer; transition: border-color 0.15s, color 0.15s;
+}
+.checkbox-label:hover { border-color: var(--cobalt); color: var(--white); }
+.checkbox-label input { accent-color: var(--cobalt); }
+
+/* ── STATION LIST ── */
+.station-list { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.5rem 0; }
+.station-list li {
+  background: rgba(45,107,228,0.15); border: 1px solid rgba(45,107,228,0.25);
+  border-radius: 4px; padding: 2px 10px;
+  font-size: 0.78rem; color: var(--chrome);
+  font-family: var(--mono);
+}
+
+/* ── PAGINATION ── */
+.pagination {
+  display: flex; align-items: center; gap: 0.75rem;
+  margin-top: 1.25rem; justify-content: center;
+}
+
+/* ── NAV LINK ── */
+.nav-link {
+  color: var(--glow); text-decoration: none; font-size: 0.82rem;
+  transition: color 0.2s;
+}
+.nav-link:hover { color: var(--white); }
+
+/* ── MUTED ── */
+.muted { color: var(--muted); }
+.small { font-size: 0.78rem; }
+
+/* ── COST PREVIEW ── */
+.cost-preview {
+  background: rgba(45,107,228,0.08);
+  border: 1px solid rgba(45,107,228,0.2);
+  border-radius: 8px; padding: 0.75rem 1rem;
+  margin-bottom: 1rem; font-size: 0.82rem;
+}
+
+/* ── DETAIL GRID ── */
+.detail-grid {
+  display: grid; grid-template-columns: 160px 1fr; gap: 0.5rem 1rem;
+}
+.detail-grid dt {
+  font-size: 0.75rem; color: var(--muted);
+  font-weight: 500; padding-top: 2px;
+}
+.detail-grid dd { color: var(--pale); font-size: 0.85rem; }
+
+/* ── CLIP PLAYER ── */
+.clip-player { margin-top: 1.25rem; }
+.clip-player h3 {
+  font-family: var(--display); font-size: 0.85rem;
+  color: var(--chrome); margin-bottom: 0.6rem;
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+.clip-player audio { width: 100%; }
+
+/* ── RECEIPT CARD ── */
+.receipt-card { border: 1px solid rgba(45,107,228,0.2); }
+@media print {
+  .sidebar, .topbar, .right-panel, .btn, .alert, form { display: none !important; }
+  .main-content { margin: 0 !important; }
+  body { background: white; color: black; }
+}
+
+/* ── PLACEHOLDER ── */
+.placeholder {
+  text-align: center; padding: 3rem 1rem;
+  color: var(--muted);
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1400px) {
+  :root { --right-w: 0px; }
+  .right-panel { display: none; }
+  .main-content { margin-right: 0; }
+}
+@media (max-width: 768px) {
+  :root { --sidebar-w: 0px; --top-h: 52px; }
+  .sidebar {
+    width: 260px;
+    transform: translateX(-260px);
+    transition: transform 0.28s ease;
+    z-index: 200;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .main-content { margin-left: 0; padding: 1rem; }
+  .topbar { padding-left: 1rem; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .form-row { grid-template-columns: 1fr; }
+  .detail-grid { grid-template-columns: 1fr; }
+  .mobile-menu-btn { display: flex !important; }
+  .sidebar-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 150;
+    opacity: 0;
+    transition: opacity 0.28s ease;
+  }
+  .sidebar-overlay.open {
+    display: block;
+    opacity: 1;
+  }
+}
+
+/* Mobile menu button */
+.mobile-menu-btn {
+  display: none; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 6px;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--chrome); cursor: pointer; margin-right: 0.5rem;
+  position: relative;
+}
+.mobile-menu-btn .icon-close { display: none; }
+.mobile-menu-btn.is-open .icon-bars { display: none; }
+.mobile-menu-btn.is-open .icon-close { display: block; }
+
+/* ── STATION PICKER (searchable multi-select) ── */
+.station-picker { position: relative; }
+.station-picker-input {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 7px; padding: 0.6rem 0.85rem;
+  color: var(--white); font-family: var(--body); font-size: 0.85rem;
+  width: 100%; cursor: pointer;
+}
+.station-picker-input:focus { outline: none; border-color: var(--cobalt); }
+.station-picker-tags {
+  display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem;
+  min-height: 0;
+}
+.station-tag {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  background: rgba(45,107,228,0.15); border: 1px solid rgba(45,107,228,0.3);
+  border-radius: 5px; padding: 0.25rem 0.5rem 0.25rem 0.65rem;
+  font-size: 0.78rem; color: var(--chrome); font-family: var(--mono);
+}
+.station-tag button {
+  background: none; border: none; color: var(--muted);
+  cursor: pointer; font-size: 0.9rem; line-height: 1; padding: 0 2px;
+}
+.station-tag button:hover { color: var(--red); }
+.station-picker-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  background: var(--card); border: 1px solid var(--border-h);
+  border-radius: 8px; max-height: 220px; overflow-y: auto;
+  z-index: 50; display: none;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.station-picker-dropdown.open { display: block; }
+.station-picker-search {
+  width: 100%; padding: 0.55rem 0.75rem; background: rgba(0,0,0,0.2);
+  border: none; border-bottom: 1px solid var(--border);
+  color: var(--white); font-size: 0.82rem; font-family: var(--body);
+}
+.station-picker-search:focus { outline: none; }
+.station-picker-option {
+  padding: 0.5rem 0.85rem; font-size: 0.82rem; color: var(--chrome);
+  cursor: pointer; display: flex; align-items: center; gap: 0.5rem;
+  transition: background 0.15s;
+}
+.station-picker-option:hover { background: rgba(45,107,228,0.1); }
+.station-picker-option.selected { color: var(--glow); }
+.station-picker-option input { accent-color: var(--cobalt); }
+.station-picker-done {
+  width: 100%; padding: 0.5rem;
+  background: rgba(45,107,228,0.12); border: none;
+  border-top: 1px solid var(--border);
+  color: var(--glow); font-size: 0.78rem; font-weight: 600;
+  cursor: pointer; transition: background 0.15s;
+  position: sticky; bottom: 0;
+}
+.station-picker-done:hover { background: rgba(45,107,228,0.22); }
+
+
+/* ── SHARED THIN SCROLLBAR ── */
+.checkbox-grid, .station-picker-dropdown, .table-scroll, .main-content {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(74,142,255,0.3) transparent;
+}
+.checkbox-grid::-webkit-scrollbar,
+.station-picker-dropdown::-webkit-scrollbar,
+.table-scroll::-webkit-scrollbar,
+.main-content::-webkit-scrollbar {
+  width: 6px; height: 6px;
+}
+.checkbox-grid::-webkit-scrollbar-track,
+.station-picker-dropdown::-webkit-scrollbar-track,
+.table-scroll::-webkit-scrollbar-track,
+.main-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.checkbox-grid::-webkit-scrollbar-thumb,
+.station-picker-dropdown::-webkit-scrollbar-thumb,
+.table-scroll::-webkit-scrollbar-thumb,
+.main-content::-webkit-scrollbar-thumb {
+  background: rgba(74,142,255,0.25);
+  border-radius: 3px;
+}
+.checkbox-grid::-webkit-scrollbar-thumb:hover,
+.station-picker-dropdown::-webkit-scrollbar-thumb:hover,
+.table-scroll::-webkit-scrollbar-thumb:hover,
+.main-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(74,142,255,0.45);
+}
+
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <button class="mobile-menu-btn" id="mobile-menu-toggle" aria-label="Menu" aria-expanded="false">
+    <svg class="icon-bars" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+    <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+  </button>
+  <span class="topbar-title">{% block topbar_title %}{% endblock %}</span>
+  <div style="display:flex;align-items:center;gap:0.75rem;margin-left:auto;margin-right:1rem">
+    <div class="currency-toggle" id="currency-toggle" title="Switch currency display">
+      <button class="currency-btn" data-currency="ZAR" onclick="setCurrency('ZAR')">ZAR</button>
+      <button class="currency-btn" data-currency="USD" onclick="setCurrency('USD')">USD</button>
+    </div>
+  </div>
+  <div class="topbar-user">
+    <div class="topbar-avatar">{{ user.FullName[0] if user.FullName else user.Email[0] | upper }}</div>
+    <span>{{ user.FullName or user.Email }}</span>
+    <form method="post" action="/logout" style="margin:0">
+      <button type="submit" class="topbar-logout">Sign out</button>
+    </form>
+  </div>
+</header>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <a href="/dashboard"><img src="/static/images/noctiv-logo.png" alt="NOCTIV" style="mix-blend-mode:lighten"></a>
+    </div>
+
+    <div class="sidebar-section">
+      <a href="/dashboard" class="nav-item {% if request.url.path == '/dashboard' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Monitor</div>
+
+      <div class="nav-group">
+        <a href="/transcriptions" class="nav-item {% if '/transcription' in request.url.path %}active{% endif %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          Transcriptions
+        </a>
+        <div class="nav-sub">
+          <a href="/transcriptions/request" class="nav-item {% if request.url.path == '/transcriptions/request' %}active{% endif %}">Request transcription</a>
+          <a href="/transcriptions" class="nav-item {% if request.url.path == '/transcriptions' %}active{% endif %}">My transcriptions</a>
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <a href="/commercials" class="nav-item {% if '/commercial' in request.url.path or '/register-commercial' in request.url.path %}active{% endif %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-5"/><path d="M11 13l9-9"/><path d="M15 3h6v6"/></svg>
+          Commercials
+        </a>
+        <div class="nav-sub">
+          <a href="/register-commercial" class="nav-item {% if request.url.path == '/register-commercial' %}active{% endif %}">Register commercial</a>
+          <a href="/commercials" class="nav-item {% if request.url.path == '/commercials' %}active{% endif %}">My commercials</a>
+          <a href="/detections" class="nav-item {% if request.url.path == '/detections' %}active{% endif %}">Detections</a>
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <a href="/songs" class="nav-item {% if '/song' in request.url.path %}active{% endif %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          Songs
+        </a>
+        <div class="nav-sub">
+          <a href="/songs/subscribe" class="nav-item {% if request.url.path == '/songs/subscribe' %}active{% endif %}">Subscribe</a>
+          <a href="/songs" class="nav-item {% if request.url.path == '/songs' %}active{% endif %}">My subscriptions</a>
+          <a href="/songs/detections" class="nav-item {% if request.url.path == '/songs/detections' %}active{% endif %}">Detections</a>
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <a href="/words" class="nav-item {% if '/word' in request.url.path %}active{% endif %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Words & Phrases
+        </a>
+        <div class="nav-sub">
+          <a href="/words/subscribe" class="nav-item {% if request.url.path == '/words/subscribe' %}active{% endif %}">Subscribe</a>
+          <a href="/words" class="nav-item {% if request.url.path == '/words' %}active{% endif %}">My subscriptions</a>
+          <a href="/words/detections" class="nav-item {% if request.url.path == '/words/detections' %}active{% endif %}">Detections</a>
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <a href="/account/tokens" class="nav-item {% if '/account' in request.url.path %}active{% endif %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Account
+        </a>
+        <div class="nav-sub">
+          <a href="/account/tokens" class="nav-item {% if request.url.path == '/account/tokens' %}active{% endif %}">Credit balance</a>
+          <a href="/account/tokens/history" class="nav-item {% if 'history' in request.url.path %}active{% endif %}">Transaction history</a>
+          <a href="/account/credits/purchase" class="nav-item {% if 'purchase' in request.url.path %}active{% endif %}">Purchase credits</a>
+          {% if user.user_type.value == "subscriber_admin" %}
+          <a href="/account/team" class="nav-item {% if '/account/team' in request.url.path %}active{% endif %}">Team</a>
+          <a href="/account/api" class="nav-item {% if '/account/api' in request.url.path %}active{% endif %}">API access</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <a href="/detections" class="nav-item {% if request.url.path == '/detections' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        Live Dashboard
+      </a>
+      <a href="/reports" class="nav-item {% if '/report' in request.url.path %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Reports
+      </a>
+      <a href="/towers" class="nav-item {% if request.url.path == '/towers' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+        Radio Stations
+      </a>
+    </div>
+
+    {% if user.user_type.value == "internal" %}
+    <div class="sidebar-section">
+      <div class="sidebar-label">Admin</div>
+      <a href="/admin/subscribers" class="nav-item {% if '/admin/subscriber' in request.url.path %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Subscribers
+      </a>
+      <a href="/admin/invitations" class="nav-item {% if '/admin/invitation' in request.url.path %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        Invitations
+      </a>
+      <a href="/admin/tokens" class="nav-item {% if '/admin/token' in request.url.path %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Token Accounts
+      </a>
+      <a href="/admin/billing" class="nav-item {% if '/admin/billing' in request.url.path %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Billing
+      </a>
+      <a href="/admin/users" class="nav-item {% if '/admin/users' in request.url.path %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><line x1="19" y1="8" x2="23" y2="8"/><line x1="21" y1="6" x2="21" y2="10"/></svg>
+        Internal Users
+      </a>
+      <a href="/admin/pi-devices" class="nav-item {% if '/admin/pi-devices' in request.url.path %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><circle cx="17" cy="8" r="1" fill="currentColor"/><path d="M14 8h.01M17 5v.01M20 8h.01"/></svg>
+        Pi Devices
+      </a>
+    </div>
+    {% endif %}
+
+    <div class="sidebar-bottom">
+      <div class="pipeline-status">
+        <span class="status-dot"></span>
+        Pipeline active
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+    {% if error is defined and error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    {# Trial user banner — shown to non-internal users with an active trial config #}
+    {% if user.user_type.value != "internal" and trial_cfg is defined and trial_cfg %}
+      {% if trial_cfg.is_active %}
+      <div style="background:rgba(45,107,228,0.08);border:1px solid rgba(45,107,228,0.2);
+                  border-radius:8px;padding:0.65rem 1rem;margin-bottom:1.25rem;
+                  display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:0.6rem">
+          <span style="font-family:var(--mono);font-size:0.65rem;color:#4a8eff;
+                       background:rgba(45,107,228,0.15);border-radius:10px;padding:2px 8px">
+            TRIAL
+          </span>
+          <span style="font-size:0.8rem;color:var(--pale)">
+            {{ trial_cfg.days_remaining }} day{{ 's' if trial_cfg.days_remaining != 1 else '' }} remaining
+            · Station: <strong>{{ trial_cfg.trial_station.StationName if trial_cfg.trial_station else '—' }}</strong>
+          </span>
+        </div>
+        <a href="/trial-status" style="font-family:var(--mono);font-size:0.65rem;
+           color:#4a8eff;text-decoration:none;letter-spacing:0.06em">
+          View credit usage →
+        </a>
+      </div>
+      {% else %}
+      <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);
+                  border-radius:8px;padding:0.65rem 1rem;margin-bottom:1.25rem">
+        <span style="font-family:var(--mono);font-size:0.65rem;color:#f87171">
+          ● Your trial has expired. Please contact NOCTIV to upgrade your account.
+        </span>
+      </div>
+      {% endif %}
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- RIGHT PANEL -->
+  <aside class="right-panel">
+    {% if user.user_type.value != "internal" and user.SubscriberID %}
+    <div class="rp-section">
+      <div class="rp-label">Credit balance</div>
+      <div class="rp-balance">
+        <div class="rp-balance-num" id="rp-balance">{{ "%g"|format(token_balance|float) if token_balance is defined else "—" }}</div>
+        <div class="rp-balance-label">available credits</div>
+        {% if rp_balance_zar is defined %}
+        <div class="rp-balance-label" style="margin-top:0.25rem;font-size:0.8rem;color:var(--white)"
+             data-zar="{{ rp_balance_zar }}" data-usd="{{ rp_balance_usd }}">{{ rp_balance_zar if rp_currency == 'ZAR' else rp_balance_usd }}</div>
+        {% endif %}
+      </div>
+      <a href="/account/tokens" class="rp-action" style="margin-top:0.75rem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        View credit history
+      </a>
+    </div>
+    {% endif %}
+
+    {% if out_of_schedule_items is defined and out_of_schedule_items %}
+    <!-- Out-of-schedule detections panel — shown when subscriber clicks VIEW -->
+    <div class="rp-section" id="oos-panel">
+      <div class="rp-label" style="color:#fb923c">Out of schedule</div>
+      <p class="muted small" style="margin-bottom:0.75rem;font-size:0.72rem">
+        These detections occurred outside your registered time frame.
+        Audio, transcriptions and proof of broadcast are not available until added to your dashboard.
+      </p>
+      {% for item in out_of_schedule_items %}
+      <div class="rp-stat" style="margin-bottom:0.5rem;padding:0.5rem;background:rgba(251,146,60,0.06);border:1px solid rgba(251,146,60,0.15);border-radius:6px">
+        <div style="font-size:0.75rem;font-weight:600;color:var(--white)">{{ item.label }}</div>
+        <div style="font-size:0.68rem;color:var(--muted);margin-top:2px">{{ item.station }} · {{ item.date }} {{ item.time }}</div>
+      </div>
+      {% endfor %}
+      {% if out_of_schedule_update_url is defined %}
+      <form method="post" action="{{ out_of_schedule_update_url }}"
+            onsubmit="return confirm('Extend your registration to cover these detections and bill accordingly?')">
+        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.5rem">
+          Additional cost: <strong style="color:var(--white)">{{ out_of_schedule_cost }}</strong> credits
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;font-size:0.8rem">
+          UPDATE / INCLUDE
+        </button>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+
+  </aside>
+
+</div>
+
+<script>
+// ── MOBILE HAMBURGER MENU ──
+(function() {
+  var sidebar = document.querySelector('.sidebar');
+  var toggleBtn = document.getElementById('mobile-menu-toggle');
+  var overlay = document.getElementById('sidebar-overlay');
+
+  function openMenu() {
+    sidebar.classList.add('open');
+    overlay.classList.add('open');
+    toggleBtn.classList.add('is-open');
+    toggleBtn.setAttribute('aria-expanded', 'true');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeMenu() {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('open');
+    toggleBtn.classList.remove('is-open');
+    toggleBtn.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
+  }
+
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (sidebar.classList.contains('open')) closeMenu(); else openMenu();
+    });
+  }
+  if (overlay) {
+    overlay.addEventListener('click', closeMenu);
+  }
+  // Auto-close when a nav link is tapped (mobile UX expectation)
+  if (sidebar) {
+    sidebar.querySelectorAll('a.nav-item').forEach(function(link) {
+      link.addEventListener('click', function() {
+        if (window.innerWidth <= 768) closeMenu();
+      });
+    });
+  }
+  // Close on resize back to desktop
+  window.addEventListener('resize', function() {
+    if (window.innerWidth > 768) closeMenu();
+  });
+})();
+</script>
+
+<script>
+// ── STATION PICKER (shared across all forms) ──
+window.__stationPickerUpdate = function(fieldId) {
+  var container = document.getElementById(fieldId);
+  var tagsEl = document.getElementById(fieldId + '-tags');
+  var checked = container.querySelectorAll('input[type=checkbox]:checked');
+  tagsEl.innerHTML = '';
+  checked.forEach(function(cb) {
+    var tag = document.createElement('span');
+    tag.className = 'station-tag';
+    tag.innerHTML = cb.dataset.stationName + ' <button type="button" aria-label="Remove">&times;</button>';
+    tag.querySelector('button').addEventListener('click', function(e) {
+      e.stopPropagation();
+      cb.checked = false;
+      window.__stationPickerUpdate(fieldId);
+    });
+    tagsEl.appendChild(tag);
+  });
+  var input = document.getElementById(fieldId + '-input');
+  input.placeholder = checked.length
+    ? checked.length + ' station' + (checked.length === 1 ? '' : 's') + ' selected'
+    : 'Click to select stations…';
+  // Do NOT auto-close — user clicks Done when finished selecting
+  // Trigger any page-specific cost recalculation
+  if (typeof window.recalcCost === 'function') window.recalcCost();
+};
+
+window.__stationPickerFilter = function(fieldId, query) {
+  var container = document.getElementById(fieldId);
+  clearTimeout(container._closeTimer);
+  var q = query.toLowerCase();
+  document.querySelectorAll('#' + fieldId + '-options .station-picker-option').forEach(function(opt) {
+    opt.style.display = opt.dataset.name.includes(q) ? '' : 'none';
+  });
+};
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  document.querySelectorAll('.station-picker').forEach(function(picker) {
+    if (!picker.contains(e.target)) {
+      var dd = picker.querySelector('.station-picker-dropdown');
+      if (dd) dd.classList.remove('open');
+    }
+  });
+});
+
+// Initialise tags on page load (for forms with pre-selected stations)
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.station-picker').forEach(function(picker) {
+    window.__stationPickerUpdate(picker.id);
+  });
+});
+</script>
+
+{% block scripts %}{% endblock %}
+<script>
+// Currency toggle -- persists via cookie, updates all .currency-value elements on page
+(function() {
+  var currency = document.cookie.split(';').map(function(c) { return c.trim(); })
+    .filter(function(c) { return c.startsWith('currency='); })
+    .map(function(c) { return c.split('=')[1]; })[0] || 'ZAR';
+
+  function applyToggle(cur) {
+    document.querySelectorAll('.currency-btn').forEach(function(btn) {
+      btn.classList.toggle('active', btn.dataset.currency === cur);
+    });
+    document.querySelectorAll('[data-zar]').forEach(function(el) {
+      el.textContent = cur === 'ZAR' ? el.dataset.zar : el.dataset.usd;
+    });
+  }
+
+  window.setCurrency = function(cur) {
+    document.cookie = 'currency=' + cur + ';path=/;max-age=' + (60*60*24*365) + ';samesite=lax';
+    applyToggle(cur);
+  };
+
+  applyToggle(currency);
+})();
+</script>
+</body>
+</html>

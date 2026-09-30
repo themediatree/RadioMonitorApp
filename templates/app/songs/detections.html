@@ -1,0 +1,103 @@
+{% extends "base_app.html" %}
+{% block title %}Song Detections — RadioMonitor{% endblock %}
+{% block topbar_title %}Song Detections{% endblock %}
+{% block content %}
+    <div class="page-eyebrow">Songs</div>
+<header class="page-header">
+        <h1>Song detections</h1>
+        <a href="/songs" class="nav-link">← Back to songs</a>
+    </header>
+
+    <form method="get" action="/songs/detections" class="filter-bar">
+        <label class="form-field">
+            <span class="form-label">Station</span>
+            <select name="station_id" class="form-input" onchange="this.form.submit()">
+                <option value="">All stations</option>
+                {% for s in stations %}
+                <option value="{{ s.StationID }}" {{ 'selected' if filters.station_id == (s.StationID|string) }}>{{ s.StationName }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="form-field">
+            <span class="form-label">Title</span>
+            <input name="title" class="form-input" placeholder="Search…" value="{{ filters.title }}">
+        </label>
+        <label class="form-field">
+            <span class="form-label">Artist</span>
+            <input name="artist" class="form-input" placeholder="Search…" value="{{ filters.artist }}">
+        </label>
+        <label class="form-field">
+            <span class="form-label">From</span>
+            <input type="date" name="date_from" class="form-input" value="{{ filters.date_from }}">
+        </label>
+        <label class="form-field">
+            <span class="form-label">To</span>
+            <input type="date" name="date_to" class="form-input" value="{{ filters.date_to }}">
+        </label>
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-primary">Apply</button>
+            <a href="javascript:history.back()" class="btn btn-ghost">Clear</a>
+        </div>
+    </form>
+
+    <p class="muted small">{{ total }} detection{{ "" if total == 1 else "s" }}{% if total_pages > 1 %} — page {{ page }} of {{ total_pages }}{% endif %}.</p>
+
+    {% if rows %}
+    <div class="table-scroll"><table class="data-table">
+        <thead><tr><th>Title</th><th>Artist</th><th>Station</th><th>Source</th><th>Detected</th><th class="det-count-col"></th></tr></thead>
+        {% if is_grouped %}
+        <tbody>
+        {% set ns = namespace(seen=[]) %}
+        {% for d in rows %}
+        {% set sg_key = (d.Artist or '') + '|' + (d.Title or '') %}
+        {% if sg_key not in ns.seen %}
+        {% set _ = ns.seen.append(sg_key) %}
+        {% set sg_total = song_counts.get(sg_key, 1) %}
+        <tr>
+            <td><strong>{{ d.Title or "—" }}</strong></td>
+            <td class="muted">{{ d.Artist or "—" }}</td>
+            <td class="muted">{{ station_map.get(d.StationID, d.StationID) }}</td>
+            <td><span class="badge badge-{{ 'active' if d.DetectionSource == 'live' else 'pending' }}">{{ d.DetectionSource }}</span></td>
+            <td class="muted">{{ d.DetectedAt.strftime("%Y-%m-%d %H:%M") if d.DetectedAt else "—" }}</td>
+            <td><a href="/songs/detections/{{ d.SongDetectionID }}" class="nav-link">Details</a></td>
+            <td style="width:70px;text-align:center;white-space:nowrap;vertical-align:middle">
+              <span style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:11px;background:#fb923c;color:#060c1a;font-size:0.62rem;font-weight:700;padding:0 5px;">{{ sg_total }}</span>
+              <a {% if sg_total > 1 %}href="/songs/detections?title={{ (d.Title or '') | urlencode }}&artist={{ (d.Artist or '') | urlencode }}"{% endif %} class="btn btn-ghost btn-sm" style="margin-left:3px;padding:0 5px;font-size:0.68rem;border-color:rgba(74,142,255,{% if sg_total > 1 %}0.3);color:var(--glow){% else %}0.1);color:var(--muted);cursor:default;pointer-events:none{% endif %};" title="{% if sg_total > 1 %}View all {{ sg_total }}{% endif %}">+</a>
+            </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+        </tbody>
+        {% else %}
+        <caption style="caption-side:top;text-align:left;padding:0.5rem 0;font-size:0.82rem;color:var(--muted)">
+          <a href="javascript:history.back()" style="color:var(--glow);text-decoration:none">← All songs</a>
+          &nbsp;·&nbsp; Showing all detections for <strong style="color:var(--white)">{% if filters.artist %}{{ filters.artist }} — {% endif %}{{ filters.title }}</strong>
+        </caption>
+        <tbody>
+        {% for d in rows %}
+        <tr>
+            <td><strong>{{ d.Title or "—" }}</strong></td>
+            <td class="muted">{{ d.Artist or "—" }}</td>
+            <td class="muted">{{ station_map.get(d.StationID, d.StationID) }}</td>
+            <td><span class="badge badge-{{ 'active' if d.DetectionSource == 'live' else 'pending' }}">{{ d.DetectionSource }}</span></td>
+            <td class="muted">{{ d.DetectedAt.strftime("%Y-%m-%d %H:%M") if d.DetectedAt else "—" }}</td>
+            <td><a href="/songs/detections/{{ d.SongDetectionID }}" class="nav-link">Details</a></td>
+            <td style="width:70px"></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+        {% endif %}
+    </table></div>
+
+
+    {% if total_pages > 1 %}
+    <nav class="pagination">
+        {% if page > 1 %}<a href="/songs/detections?page={{ page-1 }}&title={{ filters.title | urlencode }}&artist={{ filters.artist | urlencode }}&station_id={{ filters.station_id }}" class="btn btn-ghost">‹ Previous</a>{% endif %}
+        <span class="muted small">Page {{ page }} of {{ total_pages }}</span>
+        {% if page < total_pages %}<a href="/songs/detections?page={{ page+1 }}&title={{ filters.title | urlencode }}&artist={{ filters.artist | urlencode }}&station_id={{ filters.station_id }}" class="btn btn-ghost">Next ›</a>{% endif %}
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="card placeholder"><p class="muted">No song detections found.</p></div>
+    {% endif %}
+{% endblock %}

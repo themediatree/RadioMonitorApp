@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign in — NOCTIV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #080d1a; --card: #111a30; --border: rgba(192,207,224,0.1);
+  --cobalt: #2d6be4; --glow: #4a8eff; --chrome: #c0cfe0;
+  --muted: #7a93b8; --white: #fff; --pale: #dce8f8;
+  --red: #ff5252;
+  --display: 'DM Sans', sans-serif; --body: 'Inter', sans-serif;
+}
+body {
+  background: var(--bg); color: var(--pale); font-family: var(--body);
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  -webkit-font-smoothing: antialiased; padding: 1.5rem;
+  position: relative; overflow: hidden;
+}
+.bg-glow {
+  position: absolute; width: 600px; height: 600px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(45,107,228,0.15), transparent 70%);
+  top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 0;
+}
+.login-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 2.5rem; width: 100%; max-width: 380px;
+  position: relative; z-index: 1;
+}
+.login-logo { text-align: center; margin-bottom: 1.5rem; }
+.login-logo img { height: 110px; width: auto; mix-blend-mode: lighten; }
+.login-card h1 {
+  font-family: var(--display); font-weight: 800; font-size: 1.3rem;
+  color: var(--white); text-align: center; margin-bottom: 0.4rem;
+}
+.login-sub { text-align: center; color: var(--muted); font-size: 0.85rem; margin-bottom: 1.5rem; }
+.form-field { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1.1rem; }
+.form-label { font-size: 0.78rem; font-weight: 500; color: var(--chrome); }
+.form-input {
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+  border-radius: 8px; padding: 0.7rem 0.9rem; color: var(--white);
+  font-family: var(--body); font-size: 0.88rem; width: 100%;
+  transition: border-color 0.2s;
+}
+.form-input:focus { outline: none; border-color: var(--cobalt); }
+.btn-primary {
+  width: 100%; background: var(--cobalt); color: var(--white);
+  padding: 0.75rem; border-radius: 8px; border: none;
+  font-family: var(--body); font-weight: 600; font-size: 0.9rem;
+  cursor: pointer; transition: background 0.2s; margin-top: 0.5rem;
+}
+.btn-primary:hover { background: var(--glow); }
+.alert-error {
+  background: rgba(255,23,68,0.1); border: 1px solid rgba(255,23,68,0.25);
+  color: var(--red); padding: 0.7rem 0.9rem; border-radius: 8px;
+  font-size: 0.82rem; margin-bottom: 1.1rem;
+}
+.login-footer {
+  text-align: center; color: var(--muted); font-size: 0.78rem;
+  margin-top: 1.5rem; line-height: 1.6;
+}
+.login-footer a { color: var(--glow); text-decoration: none; }
+.login-footer a:hover { color: var(--white); }
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+<div class="login-card">
+    <div class="login-logo">
+        <img src="/static/images/noctiv-logo.png" alt="NOCTIV">
+    </div>
+    <h1>Sign in</h1>
+    <p class="login-sub">Access your broadcast intelligence dashboard</p>
+
+    {% if error %}
+        <div class="alert-error" role="alert">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/login" autocomplete="on">
+        <div class="form-field">
+            <label class="form-label">Email</label>
+            <input type="email" name="email" value="{{ email or '' }}"
+                   required autofocus autocomplete="username"
+                   class="form-input">
+        </div>
+
+        <div class="form-field">
+            <label class="form-label" style="display:flex;justify-content:space-between;align-items:center">
+                Password
+                <a href="/forgot-password" style="font-weight:400;color:var(--glow);text-decoration:none;font-size:0.75rem">Forgot password?</a>
+            </label>
+            <input type="password" name="password" required
+                   autocomplete="current-password" class="form-input">
+        </div>
+
+        <button type="submit" class="btn-primary">Sign in</button>
+    </form>
+
+    <p class="login-footer">
+        Don't have an account? Accounts are created by invitation.<br>
+        <a href="/#contact">Contact NOCTIV</a> to request access.
+    </p>
+</div>
+</body>
+</html>

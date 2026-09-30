@@ -1,0 +1,57 @@
+{% extends "base_app.html" %}
+{% block title %}Song Retrospective Search — RadioMonitor{% endblock %}
+{% block topbar_title %}Song Retrospective Search{% endblock %}
+{% block content %}
+    <div class="page-eyebrow">Songs</div>
+<header class="page-header">
+        <h1>Song retrospective search</h1>
+        <a href="/songs" class="nav-link">← Back to songs</a>
+    </header>
+    <p class="muted">Search historical song detections. Results are returned from the pipeline's song detection history — no re-processing needed.</p>
+
+    <form method="post" action="/songs/search" class="card form-card">
+        {% if user.user_type.value == "internal" %}
+        <label class="form-field">
+            <span class="form-label">Subscriber</span>
+            <select name="subscriber_id" class="form-input" required>
+                <option value="">— select —</option>
+                {% for s in subscribers %}<option value="{{ s.SubscriberID }}">{{ s.Name }}</option>{% endfor %}
+            </select>
+        </label>
+        {% endif %}
+        <label class="form-field">
+            <span class="form-label">Track ID <span class="muted small">(most precise)</span></span>
+            <input name="track_id" class="form-input" placeholder="e.g. 644458">
+        </label>
+        <label class="form-field">
+            <span class="form-label">Title filter</span>
+            <input name="title_filter" class="form-input" placeholder="e.g. Surfin' U.S.A.">
+        </label>
+        <label class="form-field">
+            <span class="form-label">Artist filter</span>
+            <input name="artist_filter" class="form-input" placeholder="e.g. Beach Boys">
+        </label>
+        <div class="form-row">
+            <label class="form-field">
+                <span class="form-label">Date from</span>
+                <input type="date" name="date_from" class="form-input" required>
+            </label>
+            <label class="form-field">
+                <span class="form-label">Date to</span>
+                <input type="date" name="date_to" class="form-input" required>
+            </label>
+        </div>
+        <fieldset class="form-field">
+            <legend class="form-label">Stations <span class="muted small">(leave all unchecked = all stations)</span></legend>
+            <div class="checkbox-grid">
+            {% for st in stations %}
+                <label class="checkbox-label"><input type="checkbox" name="station_ids" value="{{ st.StationID }}"> {{ st.StationName }}</label>
+            {% endfor %}
+            </div>
+        </fieldset>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Submit search</button>
+            <a href="/songs" class="btn btn-ghost">Cancel</a>
+        </div>
+    </form>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base_app.html" %}
+{% block title %}Purchase Credits — NOCTIV{% endblock %}
+{% block topbar_title %}Purchase Credits{% endblock %}
+{% block content %}
+<div class="page-eyebrow">Account</div>
+<header class="page-header">
+  <h1>Purchase credits</h1>
+  <a href="/account/tokens" class="nav-link">← Back to balance</a>
+</header>
+<div class="card" style="max-width:560px">
+  <h2 style="font-family:var(--display);font-size:1.1rem;color:var(--white);margin-bottom:1rem">How to purchase credits</h2>
+  <p class="muted small" style="line-height:1.7;margin-bottom:1.25rem">
+    NOCTIV credits are purchased via EFT bank transfer. Once payment is confirmed, credits are added to your account within one business day.
+  </p>
+  <div style="background:rgba(45,107,228,0.08);border:1px solid rgba(45,107,228,0.2);border-radius:8px;padding:1.25rem;margin-bottom:1.25rem">
+    <div class="rp-label" style="margin-bottom:0.75rem">Banking details</div>
+    <dl class="detail-grid">
+      <dt>Bank</dt><dd>— Contact NOCTIV —</dd>
+      <dt>Account name</dt><dd>NOCTIV</dd>
+      <dt>Reference</dt><dd style="font-family:var(--mono)">Your email address</dd>
+    </dl>
+  </div>
+  <p class="muted small">After payment, email <a href="mailto:admin@noctiv.co.za" class="nav-link">admin@noctiv.co.za</a> with your proof of payment and we'll credit your account promptly.</p>
+</div>
+{% endblock %}

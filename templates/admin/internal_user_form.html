@@ -1,0 +1,102 @@
+{% extends "base_app.html" %}
+{% block title %}{{ 'Edit' if edit_user else 'New' }} Internal User — RadioMonitor{% endblock %}
+{% block topbar_title %}{{ 'Edit' if edit_user else 'New' }} Internal User{% endblock %}
+
+{% block content %}
+<header class="page-header">
+  <h1>{{ 'Edit Internal User' if edit_user else 'New Internal User' }}</h1>
+  <a href="/admin/users" class="btn btn-ghost">← Back</a>
+</header>
+
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+
+<div class="card" style="max-width:520px">
+  <form method="post"
+        action="{{ '/admin/users/' ~ edit_user.UserID if edit_user else '/admin/users' }}">
+
+    <div class="form-field">
+      <label class="form-label" for="full_name">Full Name *</label>
+      <input type="text" id="full_name" name="full_name" class="form-input" required
+             value="{{ edit_user.FullName if edit_user else (form.full_name or '') }}"
+             placeholder="e.g. John Smith">
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="email">Email Address *</label>
+      <input type="email" id="email" name="email" class="form-input" required
+             value="{{ edit_user.Email if edit_user else (form.email or '') }}"
+             placeholder="user@noctiv.co.za">
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="password">
+        Password {% if not edit_user %}*{% else %}<span style="color:var(--muted);font-weight:400">(leave blank to keep current)</span>{% endif %}
+      </label>
+      <input type="password" id="password" name="password" class="form-input"
+             {% if not edit_user %}required{% endif %}
+             placeholder="Minimum 8 characters"
+             autocomplete="new-password">
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="password_confirm">Confirm Password {% if not edit_user %}*{% endif %}</label>
+      <input type="password" id="password_confirm" name="password_confirm" class="form-input"
+             {% if not edit_user %}required{% endif %}
+             placeholder="Repeat password"
+             autocomplete="new-password">
+    </div>
+
+    <div class="form-field" style="margin-bottom:0.5rem">
+      <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer">
+        <input type="checkbox" name="can_download" value="on"
+               {% if (edit_user and edit_user.CanDownload) or (not edit_user) %}checked{% endif %}
+               style="width:16px;height:16px;accent-color:var(--cobalt)">
+        <span class="form-label" style="margin-bottom:0">Can Download Reports</span>
+      </label>
+    </div>
+
+    {% if edit_user %}
+    <div class="form-field">
+      <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer">
+        <input type="checkbox" name="is_active" value="on"
+               {% if edit_user.IsActive %}checked{% endif %}
+               style="width:16px;height:16px;accent-color:var(--cobalt)">
+        <span class="form-label" style="margin-bottom:0">Active</span>
+      </label>
+      {% if edit_user.UserID == user.UserID %}
+      <div class="form-hint" style="color:var(--muted)">You cannot deactivate your own account.</div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
+      <button type="submit" class="btn btn-primary">
+        {{ 'Save Changes' if edit_user else 'Create User' }}
+      </button>
+      <a href="/admin/users" class="btn btn-ghost">Cancel</a>
+    </div>
+
+  </form>
+</div>
+
+{% if edit_user %}
+<div class="card" style="max-width:520px;margin-top:1.25rem;border-left:4px solid rgba(220,38,38,0.4)">
+  <h3 style="color:var(--red)">Danger Zone</h3>
+  <p class="muted small">Deactivating this user will immediately invalidate their session.</p>
+  {% if edit_user.UserID != user.UserID %}
+  <form method="post" action="/admin/users/{{ edit_user.UserID }}/deactivate"
+        onsubmit="return confirm('Deactivate {{ edit_user.FullName or edit_user.Email }}? Their session will be terminated.')">
+    <button type="submit" class="btn btn-ghost"
+            style="color:var(--red);border-color:rgba(220,38,38,0.3)">
+      Deactivate User
+    </button>
+  </form>
+  {% else %}
+  <p class="muted small" style="font-style:italic">You cannot deactivate your own account.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

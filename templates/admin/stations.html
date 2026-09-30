@@ -1,0 +1,29 @@
+{% extends "base_app.html" %}
+{% block title %}Stations — RadioMonitor{% endblock %}
+{% block topbar_title %}Stations{% endblock %}
+{% block content %}
+    <header class="page-header">
+        <h1>Station accounts</h1>
+        <p class="muted">Billing/tenant accounts for radio stations (the pipeline owns the stations themselves).</p>
+        <a href="/admin/stations/new" class="btn btn-cta">New station account</a>
+    </header>
+    {% if accounts %}
+    <table class="data-table">
+        <thead><tr><th>Station</th><th>Plan</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        {% for acct, station in accounts %}
+        <tr>
+            <td>{{ station.StationName }}</td>
+            <td>{{ acct.SubscriptionPlan }}</td>
+            <td>{% if acct.AccountStatus == 'active' %}<span class="badge badge-success">active</span>
+                {% elif acct.AccountStatus == 'expired_grace' %}<span class="badge badge-warning">grace</span>
+                {% else %}<span class="badge badge-dim">{{ acct.AccountStatus }}</span>{% endif %}</td>
+            <td><a href="/admin/stations/{{ acct.StationAccountID }}/edit" class="nav-link">Edit</a></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="card placeholder"><p class="muted">No station accounts yet.</p></div>
+    {% endif %}
+{% endblock %}

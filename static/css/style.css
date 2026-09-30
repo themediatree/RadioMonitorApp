@@ -1,0 +1,364 @@
+/* =============================================================================
+   Reset / base
+   ============================================================================= */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+    font-family: var(--font-sans);
+    background: var(--bg-deep);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+a { color: var(--accent-bright); text-decoration: none; }
+a:hover { color: var(--accent); }
+
+h1, h2, h3 { line-height: 1.2; margin: 0 0 var(--space-3); }
+h1 { font-size: 2rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.125rem; }
+
+p { margin: 0 0 var(--space-3); }
+.muted { color: var(--text-muted); }
+
+/* =============================================================================
+   Layout
+   ============================================================================= */
+.container {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 var(--space-5);
+}
+
+.site-header {
+    background: var(--bg-surface);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-4) var(--space-5);
+}
+.brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--text);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+.brand-mark { color: var(--accent-bright); }
+.primary-nav { display: flex; align-items: center; gap: var(--space-4); }
+.nav-link { color: var(--text-muted); }
+.nav-link:hover { color: var(--text); }
+.nav-user { color: var(--text-muted); font-size: 0.9rem; }
+.nav-form { margin: 0; }
+
+.site-main { flex: 1; }
+.site-footer {
+    padding: var(--space-6) 0;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    margin-top: var(--space-10);
+}
+
+/* =============================================================================
+   Buttons
+   ============================================================================= */
+.btn {
+    display: inline-block;
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-md);
+    border: 0;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 0.15s, color 0.15s;
+}
+.btn-primary {
+    background: var(--accent);
+    color: var(--text);
+}
+.btn-primary:hover { background: var(--accent-bright); color: var(--text); }
+.btn-cta {
+    background: var(--cta);
+    color: var(--text);
+}
+.btn-cta:hover { background: var(--cta-hover); color: var(--text); }
+.btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+.btn-block { display: block; width: 100%; }
+
+/* =============================================================================
+   Hero / pitch (landing)
+   ============================================================================= */
+.hero { padding: var(--space-10) 0 var(--space-8); }
+.hero h1 { font-size: 2.5rem; max-width: 700px; }
+.hero .lead {
+    font-size: 1.15rem;
+    color: var(--text-muted);
+    max-width: 600px;
+    margin-bottom: var(--space-6);
+}
+.pitch { padding: var(--space-6) 0; }
+.grid-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--space-5);
+}
+
+/* =============================================================================
+   Cards
+   ============================================================================= */
+.card {
+    background: var(--bg-surface);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    box-shadow: var(--shadow-card);
+}
+.card.placeholder {
+    border-style: dashed;
+    border-color: rgba(255,255,255,0.08);
+}
+
+/* =============================================================================
+   Auth (login)
+   ============================================================================= */
+.auth-section {
+    display: flex;
+    justify-content: center;
+    padding: var(--space-10) var(--space-5);
+}
+.auth-card {
+    background: var(--bg-surface);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    width: 100%;
+    max-width: 420px;
+    box-shadow: var(--shadow-elevated);
+}
+.form-stack { display: flex; flex-direction: column; gap: var(--space-4); }
+.form-field { display: flex; flex-direction: column; gap: var(--space-2); }
+.form-label {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+.form-input {
+    background: var(--bg-elevated);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text);
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
+    font-size: 1rem;
+    font-family: inherit;
+}
+.form-input:focus {
+    outline: none;
+    border-color: var(--accent-bright);
+    box-shadow: 0 0 0 2px rgba(20, 184, 168, 0.2);
+}
+.auth-footer {
+    margin-top: var(--space-5);
+    font-size: 0.875rem;
+    text-align: center;
+}
+
+.alert {
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-4);
+    font-size: 0.9rem;
+}
+.alert-error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+}
+
+/* =============================================================================
+   Dashboard
+   ============================================================================= */
+.dashboard-shell { padding: var(--space-8) 0; }
+.page-header { margin-bottom: var(--space-8); }
+.debug-panel {
+    margin-top: var(--space-8);
+    padding: var(--space-5);
+    background: var(--bg-surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255,255,255,0.05);
+}
+.kv {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: var(--space-2) var(--space-5);
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+}
+.kv dt { color: var(--text-muted); }
+.kv dd { margin: 0; color: var(--text); }
+
+/* =============================================================================
+   Error pages
+   ============================================================================= */
+.error-page {
+    padding: var(--space-10) 0;
+    text-align: center;
+}
+.error-page h1 { font-size: 4rem; color: var(--accent-bright); }
+
+/* =============================================================================
+   Responsive
+   ============================================================================= */
+@media (max-width: 640px) {
+    .hero h1 { font-size: 1.75rem; }
+    .header-inner { padding: var(--space-3) var(--space-4); }
+}
+
+/* =============================================================================
+   Invitations / admin tables (Phase 1B)
+   ============================================================================= */
+.auth-card-wide { max-width: 520px; }
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-surface);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+.data-table th, .data-table td {
+    text-align: left;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.data-table th {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+.data-table tr:last-child td { border-bottom: 0; }
+
+.badge {
+    display: inline-block;
+    padding: 2px var(--space-3);
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+.badge-success { background: rgba(34,197,94,0.15);  color: #86efac; }
+.badge-warning { background: rgba(234,179,8,0.15);  color: #fde047; }
+.badge-dim     { background: rgba(100,116,139,0.18); color: var(--text-muted); }
+
+.form-hint { font-size: 0.8rem; }
+.small { font-size: 0.85rem; }
+
+/* Alpine: hide elements with x-cloak until Alpine initializes,
+   so conditional fields don't flash on load. */
+[x-cloak] { display: none !important; }
+
+.admin-actions {
+    margin-top: var(--space-8);
+    padding-top: var(--space-6);
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Inline checkbox field (Phase: tenant management) */
+.form-field-inline {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+.form-field-inline input[type="checkbox"] { width: 16px; height: 16px; }
+.admin-actions .btn { margin-right: var(--space-2); margin-bottom: var(--space-2); }
+
+/* Side-by-side fields (registration form date pair) */
+.form-row { display: flex; gap: var(--space-4); }
+.form-row .form-field { flex: 1; }
+@media (max-width: 480px) { .form-row { flex-direction: column; } }
+
+/* Detections list + detail */
+.filter-bar {
+    display: flex;
+    gap: var(--space-4);
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: var(--space-4);
+    padding: var(--space-3);
+    background: var(--color-surface, #f7f7f9);
+    border-radius: 6px;
+}
+.filter-bar .form-field { flex: 1 1 160px; min-width: 140px; }
+.filter-actions { display: flex; gap: var(--space-2); }
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    margin: var(--space-4) 0;
+}
+
+.detection-detail { padding: var(--space-4); }
+.detail-grid {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: var(--space-2) var(--space-4);
+    margin: var(--space-3) 0;
+}
+.detail-grid dt { font-weight: 600; color: var(--color-text-muted, #555); }
+.detail-grid dd { margin: 0; }
+
+.clip-player {
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border, #e2e2e4);
+}
+.clip-player audio { width: 100%; max-width: 520px; margin-top: var(--space-2); }
+
+/* Registration T&C gate */
+.terms-gate { border: 1px solid var(--color-border, #e2e2e4); border-radius: 6px; padding: var(--space-3); }
+.terms-text { font-size: 0.9em; color: var(--color-text-muted, #555); padding: var(--space-3); margin-bottom: var(--space-2); max-height: 120px; overflow-y: auto; }
+.terms-confirm { margin-top: var(--space-2); }
+.form-row { display: flex; gap: var(--space-4); flex-wrap: wrap; }
+.form-row .form-field { flex: 1 1 160px; }
+.checkbox-grid { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin-top: var(--space-2); }
+.checkbox-label { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; }
+
+/* Status badges */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.badge-pending   { background: #fff3cd; color: #856404; }
+.badge-active    { background: #d1e7dd; color: #0a3622; }
+.badge-withdrawn { background: #f8d7da; color: #58151c; }
+.station-list { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-2) 0; }
+.station-list li { background: #e2e2e8; border-radius: 4px; padding: 2px 10px; font-size: 0.9em; color: #111; }
+
+/* Danger button */
+.btn-danger { background: #dc3545; color: #fff; border: none; }
+.btn-danger:hover { background: #b02a37; }
+
+/* Alert success */
+.alert-success { background: #d1e7dd; color: #0a3622; border: 1px solid #a3cfbb; border-radius: 6px; padding: var(--space-3); margin-bottom: var(--space-3); }
+
+/* Receipt print */
+.receipt-card { border: 1px solid #ccc; }
+@media print {
+    .primary-nav, .btn, .alert, form, a { display: none !important; }
+    .receipt-card { border: 1px solid #000; }
+    body { font-size: 11pt; }
+}
+
+/* Small button variant */
+.btn-sm { padding: 2px 10px; font-size: 0.85em; }

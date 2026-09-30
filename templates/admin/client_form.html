@@ -1,0 +1,54 @@
+{% extends "base_app.html" %}
+{% block title %}{{ 'Edit' if client else 'New' }} client — RadioMonitor{% endblock %}
+{% block topbar_title %}{{ 'Edit' if client else 'New' }} client{% endblock %}
+{% block content %}
+<section class="auth-section"><div class="auth-card auth-card-wide">
+    <h1>{{ 'Edit client' if client else 'New client' }}</h1>
+    {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
+
+    {% set action = '/admin/clients/' ~ client.ClientID if client else '/admin/clients' %}
+    <form method="post" action="{{ action }}" class="form-stack">
+        <label class="form-field">
+            <span class="form-label">Name</span>
+            <input type="text" name="name" required class="form-input"
+                   value="{{ client.Name if client else (form.name or '') }}">
+        </label>
+        <label class="form-field">
+            <span class="form-label">Subscription plan</span>
+            <select name="plan" class="form-input" required>
+                <option value="" disabled {% if not client and not form.plan %}selected{% endif %}>Select a plan…</option>
+                {% for p in plans %}
+                <option value="{{ p.PlanCode }}"
+                    {% if (client and client.SubscriptionPlan == p.PlanCode) or form.plan == p.PlanCode %}selected{% endif %}>
+                    {{ p.DisplayName }}
+                </option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="form-field">
+            <span class="form-label">Status</span>
+            <select name="status" class="form-input" required>
+                {% for s in statuses %}
+                <option value="{{ s }}"
+                    {% if (client and client.ClientStatus == s) or form.status == s or (not client and not form.status and s == 'active') %}selected{% endif %}>
+                    {{ s.replace('_', ' ') }}
+                </option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="form-field">
+            <span class="form-label">Contact email <span class="muted small">(optional)</span></span>
+            <input type="email" name="contact_email" class="form-input"
+                   value="{{ client.ContactEmail or '' if client else (form.contact_email or '') }}">
+        </label>
+        <label class="form-field">
+            <span class="form-label">Contact phone <span class="muted small">(optional)</span></span>
+            <input type="text" name="contact_phone" class="form-input"
+                   value="{{ client.ContactPhone or '' if client else (form.contact_phone or '') }}">
+        </label>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">{{ 'Save changes' if client else 'Create client' }}</button>
+            <a href="/admin/clients" class="btn btn-ghost">Cancel</a>
+        </div>
+    </form>
+{% endblock %}

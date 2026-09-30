@@ -1,0 +1,91 @@
+{% extends "base_app.html" %}
+{% block title %}Billing Configuration — NOCTIV Admin{% endblock %}
+{% block topbar_title %}Billing{% endblock %}
+{% block content %}
+<div class="page-eyebrow">Admin</div>
+<header class="page-header">
+    <h1>Billing configuration</h1>
+</header>
+
+{% if saved == 'rates' %}<div class="alert alert-success" style="margin-bottom:1rem">Token rates updated successfully.</div>{% endif %}
+{% if saved == 'fx' %}<div class="alert alert-success" style="margin-bottom:1rem">Exchange rate updated successfully.</div>{% endif %}
+{% if saved == 'error' %}<div class="alert alert-error" style="margin-bottom:1rem">One or more values were invalid — no changes saved.</div>{% endif %}
+
+<!-- ── EXCHANGE RATE ─────────────────────────────────────────────────────── -->
+<section class="card" style="margin-bottom:1.5rem">
+    <h2 class="card-title" style="margin-bottom:1rem">ZAR / USD exchange rate</h2>
+    <p class="muted small" style="margin-bottom:1rem">Display-only — used to show USD equivalents to international clients. Does not affect token debit amounts.</p>
+    <form method="post" action="/admin/billing/fx" style="display:flex;gap:1rem;align-items:flex-end">
+        <div class="form-field" style="margin:0;flex:0 0 200px">
+            <label class="form-label">ZAR per 1 USD</label>
+            <input type="number" name="fx_rate" step="0.0001" min="0.0001"
+                   value="{{ '%.4f' % fx_rate }}" class="form-input" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Update rate</button>
+    </form>
+</section>
+
+<!-- ── PER-PLAN TOKEN PRICES ─────────────────────────────────────────────── -->
+<section class="card" style="margin-bottom:1.5rem">
+    <h2 class="card-title" style="margin-bottom:1rem">Token price per plan</h2>
+    <p class="muted small" style="margin-bottom:1rem">Sets the ZAR value of one credit token for each subscription plan. All cost displays across the dashboard and API derive from this value.</p>
+    <form method="post" action="/admin/billing/rates">
+        <div class="table-scroll"><table class="data-table">
+            <thead><tr><th>Plan</th><th>ZAR per token</th><th>USD equivalent</th></tr></thead>
+            <tbody>
+            {% for plan in plans %}
+            {% set rate_row = rates.get(plan.PlanCode) %}
+            {% set zar = rate_row.ZARPerToken if rate_row else 3.60 %}
+            <tr>
+                <td><strong>{{ plan.DisplayName }}</strong><br><span class="muted small">{{ plan.PlanCode }}</span></td>
+                <td>
+                    <div style="display:flex;align-items:center;gap:0.5rem">
+                        <span class="muted">R</span>
+                        <input type="number" name="rate_{{ plan.PlanCode }}"
+                               step="0.0001" min="0.0001"
+                               value="{{ '%.4f' % zar }}"
+                               class="form-input" style="width:120px" required>
+                    </div>
+                </td>
+                <td class="muted">$ {{ '%.4f' % (zar / fx_rate) }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table></div>
+        <div class="form-actions" style="margin-top:1rem">
+            <button type="submit" class="btn btn-primary">Save rates</button>
+        </div>
+    </form>
+</section>
+
+<!-- ── EFFECTIVE COST MATRIX ─────────────────────────────────────────────── -->
+<section class="card">
+    <h2 class="card-title" style="margin-bottom:0.25rem">Effective cost per unit</h2>
+    <p class="muted small" style="margin-bottom:1rem">Reference: 1 station × 30 days. Read-only — updates automatically when rates change.</p>
+    <div class="table-scroll"><table class="data-table">
+        <thead>
+            <tr>
+                <th>Plan</th>
+                <th>ZAR / token</th>
+                <th>Tokens / unit</th>
+                <th>ZAR / unit</th>
+                <th>USD / unit</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for row in matrix %}
+        <tr>
+            <td><strong>{{ row.display_name }}</strong></td>
+            <td class="muted">{{ row.zar_per_token }}</td>
+            <td class="muted" style="font-family:var(--mono);font-size:0.8rem">{{ row.tokens_per_unit }}</td>
+            <td><strong style="color:var(--white)">{{ row.zar_per_unit }}</strong></td>
+            <td class="muted">{{ row.usd_per_unit }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+    <p class="muted small" style="margin-top:0.75rem">
+        Formula: <span style="font-family:var(--mono);font-size:0.78rem">tokens = stations × hours (min 24h) · cost = tokens × ZAR/token</span>
+    </p>
+</section>
+{% endblock %}

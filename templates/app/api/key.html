@@ -1,0 +1,156 @@
+{% extends "base_app.html" %}
+{% block title %}API Access — NOCTIV{% endblock %}
+{% block topbar_title %}API Access{% endblock %}
+{% block content %}
+<div class="page-eyebrow">Account</div>
+<header class="page-header">
+    <h1>API access</h1>
+</header>
+
+{% if generated %}
+<div class="alert alert-success" style="margin-bottom:1.25rem">
+    <strong>Your new API key (shown once — copy it now):</strong><br>
+    <code style="font-family:var(--mono);font-size:0.9rem;word-break:break-all;color:var(--white);background:rgba(0,0,0,0.3);padding:0.5rem 0.75rem;border-radius:6px;display:block;margin-top:0.5rem">{{ generated }}</code>
+    <p class="small" style="margin-top:0.5rem;margin-bottom:0">This key will not be shown again. Store it securely.</p>
+</div>
+{% endif %}
+
+<div class="card" style="margin-bottom:1.25rem">
+    <h2 class="card-title" style="margin-bottom:1rem">Your API key</h2>
+    {% if key_row %}
+    <dl class="detail-grid" style="margin-bottom:1rem">
+        <dt>Key prefix</dt><dd><code style="font-family:var(--mono)">{{ key_row.KeyPrefix }}…</code></dd>
+        <dt>Status</dt><dd><span class="badge badge-active">Active</span></dd>
+        <dt>Created</dt><dd class="muted">{{ key_row.CreatedAt.strftime("%Y-%m-%d %H:%M") }}</dd>
+        <dt>Last used</dt><dd class="muted">{{ key_row.LastUsedAt.strftime("%Y-%m-%d %H:%M") if key_row.LastUsedAt else "Never" }}</dd>
+    </dl>
+    <div class="form-actions">
+        <form method="post" action="/account/api/generate" style="margin:0">
+            <button type="submit" class="btn btn-ghost" onclick="return confirm('This will invalidate your current key immediately. Continue?')">Rotate key</button>
+        </form>
+        <form method="post" action="/account/api/revoke" style="margin:0">
+            <button type="submit" class="btn btn-danger" onclick="return confirm('Revoke the API key? All integrations using this key will stop working.')">Revoke key</button>
+        </form>
+    </div>
+    {% else %}
+    <p class="muted" style="margin-bottom:1rem">No API key has been generated yet.</p>
+    <form method="post" action="/account/api/generate">
+        <button type="submit" class="btn btn-primary">Generate API key</button>
+    </form>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2 class="card-title" style="margin-bottom:1rem">API reference</h2>
+    <p class="muted small" style="margin-bottom:1rem">Authenticate every request with your key in the Authorization header:</p>
+    <pre style="background:rgba(0,0,0,0.3);padding:0.75rem;border-radius:6px;font-size:0.78rem;overflow-x:auto"><code>Authorization: Bearer noctiv_your_key_here</code></pre>
+
+    <div style="margin-top:1.5rem">
+        <h3 style="font-size:0.95rem;margin-bottom:0.75rem;color:var(--white)">Pull endpoints (GET)</h3>
+        <div class="table-scroll"><table class="data-table">
+            <thead><tr><th>Endpoint</th><th>Description</th><th>Key filters</th><th>OOS fields in response</th></tr></thead>
+            <tbody>
+            <tr>
+                <td class="muted" style="font-family:var(--mono);font-size:0.78rem">GET /api/stations</td>
+                <td>Stations you have registered services on</td>
+                <td class="muted small">—</td>
+                <td class="muted small">—</td>
+            </tr>
+            <tr>
+                <td class="muted" style="font-family:var(--mono);font-size:0.78rem">GET /api/stations/available</td>
+                <td>Full master station list (200+) — use <code style="font-family:var(--mono)">name</code> in POST calls</td>
+                <td class="muted small">—</td>
+                <td class="muted small">Returns <code style="font-family:var(--mono)">name</code>, <code style="font-family:var(--mono)">province</code>, <code style="font-family:var(--mono)">stream_url</code> — one unique station per name</td>
+            </tr>
+            <tr>
+                <td class="muted" style="font-family:var(--mono);font-size:0.78rem">GET /api/detections</td>
+                <td>Commercial airings</td>
+                <td class="muted small">station_id, date_from, date_to, page, page_size</td>
+                <td class="muted small"><code style="font-family:var(--mono)">out_of_schedule</code> (bool), <code style="font-family:var(--mono)">broadcast_from</code>, <code style="font-family:var(--mono)">broadcast_to</code> (HH:MM:SS)</td>
+            </tr>
+            <tr>
+                <td class="muted" style="font-family:var(--mono);font-size:0.78rem">GET /api/songs/detections</td>
+                <td>Song airings</td>
+                <td class="muted small">station_id, date_from, date_to, page, page_size</td>
+                <td class="muted small"><code style="font-family:var(--mono)">out_of_schedule</code> (bool)</td>
+            </tr>
+            <tr>
+                <td class="muted" style="font-family:var(--mono);font-size:0.78rem">GET /api/words/detections</td>
+                <td>Keyword detections</td>
+                <td class="muted small">station_id, keyword, date_from, date_to</td>
+                <td class="muted small"><code style="font-family:var(--mono)">out_of_schedule</code> (bool)</td>
+            </tr>
+            <tr>
+                <td class="muted" style="font-family:var(--mono);font-size:0.78rem">GET /api/transcriptions</td>
+                <td>Transcription requests</td>
+                <td class="muted small">station_id, date_from, date_to, time_from (HH:MM), time_to (HH:MM), output_format (chunks/concatenated), status (pending/ready/partial), page, page_size</td>
+                <td class="muted small">—</td>
+            </tr>
+            <tr>
+                <td class="muted" style="font-family:var(--mono);font-size:0.78rem">GET /api/transcriptions/{id}/chunks</td>
+                <td>Chunk text + audio URLs</td>
+                <td class="muted small">request_id from GET /api/transcriptions</td>
+                <td class="muted small">—</td>
+            </tr>
+            <tr>
+                <td class="muted" style="font-family:var(--mono);font-size:0.78rem">GET /api/transcriptions/{id}/merged</td>
+                <td>Merged transcript text</td>
+                <td class="muted small">request_id from GET /api/transcriptions</td>
+                <td class="muted small">—</td>
+            </tr>
+            </tbody>
+        </table></div>
+    </div>
+
+    <div style="margin-top:1.5rem">
+        <h3 style="font-size:0.95rem;margin-bottom:0.75rem;color:var(--white)">Push endpoints (POST)</h3>
+        <div class="table-scroll"><table class="data-table">
+            <thead><tr><th>Endpoint</th><th>Description</th><th>Required fields</th><th>Optional fields</th></tr></thead>
+            <tbody>
+            <tr>
+                <td class="muted" style="font-family:var(--mono);font-size:0.78rem">POST /api/commercials</td>
+                <td>Register commercial</td>
+                <td class="muted small">tape_id, campaign_name, commercial_type, brand, stations (comma-separated names), start_date, end_date, audio (file)</td>
+                <td class="muted small"><code style="font-family:var(--mono)">schedule_windows</code></td>
+            </tr>
+            <tr>
+                <td class="muted" style="font-family:var(--mono);font-size:0.78rem">POST /api/songs</td>
+                <td>Subscribe to song</td>
+                <td class="muted small">title or track_id, stations (comma-separated names), start_date, end_date</td>
+                <td class="muted small"><code style="font-family:var(--mono)">schedule_windows</code></td>
+            </tr>
+            <tr>
+                <td class="muted" style="font-family:var(--mono);font-size:0.78rem">POST /api/keywords</td>
+                <td>Subscribe to keyword</td>
+                <td class="muted small">keyword, stations (comma-separated names), start_date, end_date</td>
+                <td class="muted small"><code style="font-family:var(--mono)">schedule_windows</code></td>
+            </tr>
+            <tr>
+                <td class="muted" style="font-family:var(--mono);font-size:0.78rem">POST /api/transcriptions</td>
+                <td>Request transcription</td>
+                <td class="muted small">station (name), date_from, date_to, output_format</td>
+                <td class="muted small">time_from, time_to</td>
+            </tr>
+            </tbody>
+        </table></div>
+    </div>
+
+    <div style="margin-top:1.5rem">
+        <h3 style="font-size:0.95rem;margin-bottom:0.75rem;color:var(--white)">Schedule windows</h3>
+        <p class="muted small" style="margin-bottom:0.75rem">
+            Pass <code style="font-family:var(--mono)">schedule_windows</code> on any POST endpoint to register broadcast or monitoring time windows.
+            Detections outside these windows will be flagged <code style="font-family:var(--mono)">out_of_schedule: true</code> in GET responses —
+            the same out-of-spot logic applied on the dashboard.
+        </p>
+        <pre style="background:rgba(0,0,0,0.3);padding:0.75rem;border-radius:6px;font-size:0.78rem;overflow-x:auto"><code>schedule_windows=[{"day": -1, "from": "06:00", "to": "18:00"}]</code></pre>
+        <p class="muted small" style="margin-top:0.5rem">
+            <code style="font-family:var(--mono)">day</code>: <code style="font-family:var(--mono)">-1</code> = all days,
+            <code style="font-family:var(--mono)">0</code> = Monday … <code style="font-family:var(--mono)">6</code> = Sunday.
+            Multiple windows can be supplied in the array (e.g. different hours per day).
+            Omit <code style="font-family:var(--mono)">schedule_windows</code> to register without a time restriction — all detections will be considered in-schedule.
+        </p>
+    </div>
+
+    <p class="muted small" style="margin-top:1.5rem">All endpoints return JSON. Clip/audio URLs in responses are signed and valid for 1 hour. Rate limit: 100 requests/minute.</p>
+</div>
+{% endblock %}

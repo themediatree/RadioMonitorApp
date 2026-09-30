@@ -1,0 +1,119 @@
+{% extends "base_app.html" %}
+{% from "macros/station_picker.html" import station_picker %}
+{% block title %}Subscribe to Keyword — NOCTIV{% endblock %}
+{% block topbar_title %}Subscribe to Keyword{% endblock %}
+{% block content %}
+<div class="page-eyebrow">Words & Phrases</div>
+<header class="page-header">
+    <h1>Subscribe to a keyword or phrase</h1>
+    <a href="/words" class="nav-link">← Back to words</a>
+</header>
+<p class="muted" style="margin-bottom:1.25rem">The pipeline transcribes all audio and scans for your keywords in real time. Active within 60 seconds of subscribing.</p>
+
+{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+<div class="card form-card">
+<form method="post" action="/words/subscribe">
+    {% if user.user_type.value == "internal" %}
+    <div class="form-field">
+        <span class="form-label">Subscriber</span>
+        <select name="subscriber_id" class="form-select" required>
+            <option value="">— select —</option>
+            {% for s in subscribers %}<option value="{{ s.SubscriberID }}" {{ 'selected' if form.subscriber_id == (s.SubscriberID|string) }}>{{ s.Name }}</option>{% endfor %}
+        </select>
+    </div>
+    {% endif %}
+
+    <div class="form-field">
+        <span class="form-label">Stations</span>
+        {{ station_picker(stations, selected_ids=(form.station_ids or []), field_id="word-stations") }}
+    </div>
+
+    <div class="form-field">
+        <span class="form-label">Keyword or phrase</span>
+        <input name="keyword" class="form-input" required placeholder="e.g. Pick n Pay, government, Samsung" value="{{ form.keyword or '' }}">
+        <span class="form-hint muted">Case-insensitive. Comma-separate multiple keywords e.g. love, war, children</span>
+    </div>
+
+    <div class="form-row">
+        <div class="form-field">
+            <span class="form-label">Monitor from</span>
+            <input type="date" name="start_date" class="form-input" value="{{ form.start_date or '' }}">
+        </div>
+        <div class="form-field">
+            <span class="form-label">Monitor until <span class="muted small">(blank = open-ended)</span></span>
+            <input type="date" name="end_date" class="form-input" required value="{{ form.end_date or '' }}">
+        </div>
+    </div>
+
+
+    <div class="card cost-preview" id="cost-preview" style="display:none">
+        <p class="small" style="margin:0">
+            <strong>Estimated cost:</strong>
+            <span id="cost-value">—</span> credits
+            <span id="cost-currency" data-zar="" data-usd="" style="font-weight:600;color:var(--white)"></span>
+            <span id="cost-breakdown" class="muted" style="font-size:0.85em"></span>
+        </p>
+        <p class="muted small" style="margin-top:4px">
+            Your balance: <strong>{{ "%g"|format(token_balance) }}</strong> credits
+        </p>
+    </div>	
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Subscribe</button>
+        <a href="/words" class="btn btn-ghost">Cancel</a>
+    </div>
+</form>
+</div>
+<script>
+window.recalcCost = function() {
+    var stations = document.querySelectorAll("#word-stations input[type=checkbox]:checked").length;
+    var startVal = document.querySelector("[name=start_date]") ? document.querySelector("[name=start_date]").value : "";
+    var endVal   = document.querySelector("[name=end_date]")   ? document.querySelector("[name=end_date]").value   : "";
+    if (!stations) { document.getElementById("cost-preview").style.display="none"; return; }
+    var days = 30;
+    if (startVal && endVal) { var diff = (new Date(endVal) - new Date(startVal)) / 86400000; days = Math.max(1, Math.round(diff) + 1); }
+    var cost = stations * days * 24;
+    var label = (startVal && endVal) ? days + " day" + (days===1?"":"s") : "30 days (open-ended)";
+    var zarPerToken = {{ rp_zar_per_token }};
+    var fxRate = {{ rp_fx_rate }};
+    var zarTotal = (cost * zarPerToken).toFixed(2);
+    var usdTotal = (cost * zarPerToken / fxRate).toFixed(2);
+    var zarFmt = "R " + parseFloat(zarTotal).toLocaleString("en-ZA", {minimumFractionDigits:2, maximumFractionDigits:2});
+    var usdFmt = "$ " + parseFloat(usdTotal).toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2});
+    var currEl = document.getElementById("cost-currency");
+    currEl.dataset.zar = zarFmt; currEl.dataset.usd = usdFmt;
+    var activeCur = (document.cookie.split(';').map(function(c){return c.trim();}).filter(function(c){return c.startsWith('currency=');})[0]||'currency=ZAR').split('=')[1];
+    currEl.textContent = activeCur === 'USD' ? usdFmt : zarFmt;
+    document.getElementById("cost-value").textContent = cost.toLocaleString("en-ZA", {maximumFractionDigits:0});
+    document.getElementById("cost-breakdown").textContent = " (" + stations + " station" + (stations===1?"":"s") + " × " + label + ")";
+    document.getElementById("cost-preview").style.display = "";
+};
+["start_date","end_date"].forEach(function(n){var el=document.querySelector("[name="+n+"]");if(el)el.addEventListener("change",window.recalcCost);});
+
+var DAY_NAMES = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+
+  window.recalcCost();
+}
+function addScheduleRow() {
+  var wrap = document.getElementById("schedule-rows");
+  var row = document.createElement("div");
+  row.className = "schedule-row";
+  row.style.cssText = "display:flex;gap:0.5rem;align-items:center;margin-bottom:0.4rem;flex-wrap:wrap";
+  row.innerHTML =
+    '<select name="schedule_day" class="form-input" style="flex:0 0 130px;font-size:0.82rem" onchange="updateScheduleSummary()">' +
+    DAY_NAMES.map(function(d,i){return '<option value="'+i+'">'+d+'</option>';}).join('') +
+    '</select>' +
+    '<input type="time" name="schedule_from" class="form-input" style="flex:0 0 110px;font-size:0.82rem" value="06:00" onchange="updateScheduleSummary()">' +
+    '<span style="color:var(--muted);font-size:0.82rem">to</span>' +
+    '<input type="time" name="schedule_to" class="form-input" style="flex:0 0 110px;font-size:0.82rem" value="09:00" onchange="updateScheduleSummary()">' +
+    '<button type="button" onclick="this.parentElement.remove();updateScheduleSummary();window.recalcCost();" ' +
+    'style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:0 4px">✕</button>';
+  wrap.appendChild(row);
+}
+  });
+  return total;
+}
+
+</script>
+{% endblock %}

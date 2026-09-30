@@ -1,0 +1,104 @@
+{% extends "base_app.html" %}
+{% from "macros/station_picker.html" import station_picker %}
+{% block title %}Subscribe to Song — NOCTIV{% endblock %}
+{% block topbar_title %}Subscribe to Song{% endblock %}
+{% block content %}
+<div class="page-eyebrow">Words & Phrases</div>
+<header class="page-header">
+    <h1>Subscribe to a song or artist</h1>
+    <a href="/words" class="nav-link">← Back to words</a>
+</header>
+<p class="muted" style="margin-bottom:1.25rem">The pipeline identifies songs and artists in real time across monitored stations. Active within 60 seconds of subscribing.</p>
+
+{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+<div class="card form-card">
+<form method="post" action="/songs/subscribe">
+    {% if user.user_type.value == "internal" %}
+    <div class="form-field">
+        <span class="form-label">Subscriber</span>
+        <select name="subscriber_id" class="form-select" required>
+            <option value="">— select —</option>
+            {% for s in subscribers %}<option value="{{ s.SubscriberID }}" {{ 'selected' if form.subscriber_id == (s.SubscriberID|string) }}>{{ s.Name }}</option>{% endfor %}
+        </select>
+    </div>
+    {% endif %}
+
+    <div class="form-field">
+        <span class="form-label">Stations</span>
+        {{ station_picker(stations, selected_ids=(form.station_ids or []), field_id="song-stations") }}
+    </div>
+
+    <div class="form-field">
+        <span class="form-label">Artist</span>
+        <input name="artist" class="form-input" placeholder="e.g. Taylor Swift" value="{{ form.artist or '' }}">
+        <span class="form-hint muted">Optional — leave blank to match any artist.</span>
+    </div>
+
+    <div class="form-field">
+        <span class="form-label">Song title</span>
+        <input name="title" class="form-input" required placeholder="e.g. Blinding Lights" value="{{ form.title or '' }}">
+        <span class="form-hint muted">Case-insensitive. At least one of Artist or Song title required.</span>
+    </div>
+
+    <div class="form-row">
+        <div class="form-field">
+            <span class="form-label">Monitor from</span>
+            <input type="date" name="start_date" class="form-input" value="{{ form.start_date or '' }}">
+        </div>
+        <div class="form-field">
+            <span class="form-label">Monitor until <span class="muted small">(blank = open-ended)</span></span>
+            <input type="date" name="end_date" class="form-input" required value="{{ form.end_date or '' }}">
+        </div>
+    </div>
+
+
+    <div class="card cost-preview" id="cost-preview" style="display:none">
+        <p class="small" style="margin:0">
+            <strong>Estimated cost:</strong>
+            <span id="cost-value">—</span> credits
+            <span id="cost-currency" data-zar="" data-usd="" style="font-weight:600;color:var(--white)"></span>
+            <span id="cost-breakdown" class="muted" style="font-size:0.85em"></span>
+        </p>
+        <p class="muted small" style="margin-top:4px">
+            Your balance: <strong>{{ "%g"|format(token_balance) }}</strong> credits
+        </p>
+    </div>	
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Subscribe</button>
+        <a href="/words" class="btn btn-ghost">Cancel</a>
+    </div>
+</form>
+</div>
+<script>
+window.recalcCost = function() {
+    var stations = document.querySelectorAll("#song-stations input[type=checkbox]:checked").length;
+    var startVal = document.querySelector("[name=start_date]") ? document.querySelector("[name=start_date]").value : "";
+    var endVal   = document.querySelector("[name=end_date]")   ? document.querySelector("[name=end_date]").value   : "";
+    if (!stations) { document.getElementById("cost-preview").style.display="none"; return; }
+    var days = 30;
+    if (startVal && endVal) { var diff = (new Date(endVal) - new Date(startVal)) / 86400000; days = Math.max(1, Math.round(diff) + 1); }
+    var schedHours=(typeof getScheduledHours!=='undefined')?getScheduledHours():null;
+    var hoursPerDay=(schedHours!==null&&schedHours>0)?schedHours:24;
+    var cost=stations*days*hoursPerDay;
+    var label=(startVal&&endVal)?days+" day"+(days===1?"":"s"):"30 days (open-ended)";
+    if(schedHours!==null&&schedHours>0)label+=" × "+hoursPerDay.toFixed(1)+"h/day";
+    var zarPerToken = {{ rp_zar_per_token }};
+    var fxRate = {{ rp_fx_rate }};
+    var zarTotal = (cost * zarPerToken).toFixed(2);
+    var usdTotal = (cost * zarPerToken / fxRate).toFixed(2);
+    var zarFmt = "R " + parseFloat(zarTotal).toLocaleString("en-ZA", {minimumFractionDigits:2, maximumFractionDigits:2});
+    var usdFmt = "$ " + parseFloat(usdTotal).toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2});
+    var currEl = document.getElementById("cost-currency");
+    currEl.dataset.zar = zarFmt; currEl.dataset.usd = usdFmt;
+    var activeCur = (document.cookie.split(';').map(function(c){return c.trim();}).filter(function(c){return c.startsWith('currency=');})[0]||'currency=ZAR').split('=')[1];
+    currEl.textContent = activeCur === 'USD' ? usdFmt : zarFmt;
+    document.getElementById("cost-value").textContent = cost.toLocaleString("en-ZA", {maximumFractionDigits:0});
+    document.getElementById("cost-breakdown").textContent = " (" + stations + " station" + (stations===1?"":"s") + " × " + label + ")";
+    document.getElementById("cost-preview").style.display = "";
+};
+["start_date","end_date"].forEach(function(n){var el=document.querySelector("[name="+n+"]");if(el)el.addEventListener("change",window.recalcCost);});
+
+</script>
+{% endblock %}

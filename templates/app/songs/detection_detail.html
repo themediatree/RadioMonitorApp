@@ -1,0 +1,31 @@
+{% extends "base_app.html" %}
+{% block title %}Song Detection Detail — RadioMonitor{% endblock %}
+{% block topbar_title %}Song Detection Detail{% endblock %}
+{% block content %}
+    <div class="page-eyebrow">Songs</div>
+<header class="page-header">
+        <h1>{{ detection.Title or "Song detection" }}</h1>
+        <a href="javascript:history.back()" class="nav-link">← Back to detections</a>
+    </header>
+    <section class="card detection-detail">
+        <dl class="detail-grid">
+            <dt>Title</dt><dd>{{ detection.Title or "—" }}</dd>
+            <dt>Artist</dt><dd>{{ detection.Artist or "—" }}</dd>
+            <dt>Track ID</dt><dd class="muted small">{{ detection.TrackID or "—" }}</dd>
+            <dt>Station</dt><dd>{{ station.StationName if station else detection.StationID }}</dd>
+            <dt>Aired date</dt><dd>{{ aired.aired_date or "—" }}</dd>
+            <dt>Start time</dt><dd>{{ aired.start_clock or "—" }}</dd>
+            <dt>End time</dt><dd>{{ aired.end_clock or "—" }}</dd>
+            <dt>Detected at</dt><dd>{{ detection.DetectedAt.strftime("%Y-%m-%d %H:%M:%S") if detection.DetectedAt else "—" }}</dd>
+        </dl>
+        <section class="clip-player">
+            <h3>Audio clip</h3>
+            <audio controls preload="metadata" src="/songs/detections/{{ detection.SongDetectionID }}/clip">
+                Your browser does not support audio playback.
+            </audio>
+            {% if user.user_type.value == "internal" or user.user_type.value == "subscriber_admin" or user.CanDownload %}
+            <a href="javascript:history.back()" download class="btn btn-ghost btn-sm" style="margin-top:0.5rem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" style="vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download</a>
+            {% endif %}
+        </section>
+    </section>
+{% endblock %}

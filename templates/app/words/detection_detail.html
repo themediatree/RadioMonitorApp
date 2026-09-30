@@ -1,0 +1,91 @@
+{% extends "base_app.html" %}
+{% block title %}Word Detection Detail — NOCTIV{% endblock %}
+{% block topbar_title %}Word Detection Detail{% endblock %}
+{% block content %}
+<div class="page-eyebrow">Words & Phrases</div>
+<header class="page-header">
+    <h1>"{{ detection.Keyword }}"</h1>
+    <a href="javascript:history.back()" class="nav-link">← Back to detections</a>
+</header>
+<section class="card detection-detail">
+    <dl class="detail-grid">
+        <dt>Keyword</dt><dd><strong>{{ detection.Keyword or "—" }}</strong></dd>
+        <dt>Station</dt><dd>{{ station.StationName if station else detection.StationID }}</dd>
+        <dt>Aired date</dt><dd>{{ aired.aired_date or "—" }}</dd>
+        <dt>Start time</dt><dd>{{ aired.start_clock or "—" }}</dd>
+        <dt>End time</dt><dd>{{ aired.end_clock or "—" }}</dd>
+        <dt>Context before</dt><dd>{{ "%.1fs" % detection.ContextBeforeSec if detection.ContextBeforeSec else "—" }}</dd>
+        <dt>Context after</dt><dd>{{ "%.1fs" % detection.ContextAfterSec if detection.ContextAfterSec else "—" }}</dd>
+        <dt>Source</dt><dd><span class="badge badge-{{ 'active' if detection.DetectionSource == 'live' else 'pending' }}">{{ detection.DetectionSource }}</span></dd>
+        <dt>Detected at</dt><dd>{{ detection.DetectionTime.strftime("%Y-%m-%d %H:%M:%S") if detection.DetectionTime else "—" }}</dd>
+    </dl>
+
+    <section class="clip-player">
+        <h3>Audio clip</h3>
+        <audio controls preload="metadata" id="proof-audio" src="/words/detections/{{ detection.WordDetectionID }}/clip">
+            Your browser does not support audio playback.
+        </audio>
+        <p class="muted small">
+            {% if user.user_type.value == "internal" or user.user_type.value == "subscriber_admin" or user.CanDownload %}
+            <a href="javascript:history.back()" download class="btn btn-ghost btn-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" style="vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download</a>
+            {% endif %}
+        </p>
+    </section>
+
+    {% if has_transcript %}
+    <section class="clip-player" style="margin-top:1.5rem">
+        <h3>Verify what was said</h3>
+        <p class="muted small" style="margin-bottom:0.75rem">Play the audio above — the spoken words highlight in sync below, so you can confirm exactly which context the keyword appeared in.</p>
+        <div id="karaoke-transcript" class="card" style="background:rgba(0,0,0,0.2);line-height:2;font-size:0.95rem;max-height:220px;overflow-y:auto">
+            <span class="muted">Loading transcript…</span>
+        </div>
+    </section>
+    {% endif %}
+</section>
+
+{% if has_transcript %}
+<script>
+(function() {
+    var audio = document.getElementById('proof-audio');
+    var container = document.getElementById('karaoke-transcript');
+    var words = [];
+
+    fetch('/words/detections/{{ detection.WordDetectionID }}/transcript')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            words = (data.results && data.results.channels && data.results.channels[0]
+                     && data.results.channels[0].alternatives && data.results.channels[0].alternatives[0]
+                     && data.results.channels[0].alternatives[0].words) || [];
+            if (!words.length) {
+                container.innerHTML = '<span class="muted">No transcript text available.</span>';
+                return;
+            }
+            container.innerHTML = words.map(function(w, i) {
+                return '<span class="karaoke-word" data-start="' + w.start + '" data-end="' + w.end + '" data-idx="' + i + '">' + (w.word || '') + '</span>';
+            }).join(' ');
+        })
+        .catch(function() {
+            container.innerHTML = '<span class="muted">Transcript could not be loaded.</span>';
+        });
+
+    audio.addEventListener('timeupdate', function() {
+        var t = audio.currentTime;
+        var spans = container.querySelectorAll('.karaoke-word');
+        spans.forEach(function(span) {
+            var start = parseFloat(span.dataset.start);
+            var end = parseFloat(span.dataset.end);
+            if (t >= start && t <= end) {
+                span.classList.add('karaoke-active');
+            } else {
+                span.classList.remove('karaoke-active');
+            }
+        });
+    });
+})();
+</script>
+<style>
+.karaoke-word { color: var(--muted); transition: color 0.15s, background 0.15s; padding: 1px 2px; border-radius: 3px; }
+.karaoke-word.karaoke-active { color: var(--white); background: rgba(45,107,228,0.35); font-weight: 600; }
+</style>
+{% endif %}
+{% endblock %}

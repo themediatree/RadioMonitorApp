@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOCTIV — AI-Powered Broadcast Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+@keyframes gradShift {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:      #080d1a;
+    --navy-mid:  #0d1630;
+    --navy-card: #111a30;
+    --cobalt:    #1a4fa8;
+    --electric:  #2d6be4;
+    --glow:      #4a8eff;
+    --chrome:    #c0cfe0;
+    --pale:      #dce8f8;
+    --white:     #ffffff;
+    --muted:     #7a93b8;
+    --mono:      'JetBrains Mono', monospace;
+    --display:   'DM Sans', sans-serif;
+    --body:      'Inter', sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: linear-gradient(135deg, #080d1a 0%, #0d1a35 25%, #0a1428 50%, #081630 75%, #080d1a 100%);
+    background-size: 300% 300%;
+    animation: gradShift 18s ease infinite;
+    color: var(--pale);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── NAV ── */
+  .nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.25rem 4rem;
+    background: rgba(8,13,26,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(192,207,224,0.08);
+  }
+  .nav-logo {
+    font-family: var(--display);
+    font-weight: 800; font-size: 1.4rem;
+    color: var(--white); letter-spacing: 0.08em;
+    text-decoration: none;
+  }
+  .nav-logo span { color: var(--glow); }
+  .nav-right { display: flex; align-items: center; gap: 2rem; }
+  .nav-links { display: flex; gap: 2rem; align-items: center; }
+  .nav-links a {
+    color: var(--chrome); font-size: 0.9rem; text-decoration: none;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--white); }
+  .nav-cta {
+    background: var(--cobalt); color: var(--white) !important;
+    padding: 0.55rem 1.4rem; border-radius: 6px;
+    font-weight: 600 !important; font-size: 0.875rem !important;
+    transition: background 0.2s !important;
+  }
+  .nav-cta:hover { background: var(--electric) !important; color: var(--white) !important; }
+  .nav-hamburger-wrap { display: none; position: relative; }
+  .nav-hamburger {
+    display: flex; flex-direction: column; justify-content: center; gap: 5px;
+    background: none; border: none; cursor: pointer; padding: 4px;
+  }
+  .nav-hamburger span {
+    display: block; width: 24px; height: 2px;
+    background: var(--chrome); border-radius: 2px; transition: all 0.25s;
+  }
+  .nav-mobile {
+    display: none; position: absolute; top: 100%; right: 0; z-index: 200;
+    min-width: 200px;
+    background: rgba(8,13,26,0.98); backdrop-filter: blur(16px);
+    flex-direction: column; align-items: flex-start;
+    padding: 0.5rem 0; border: 1px solid rgba(192,207,224,0.1);
+    border-radius: 0 0 10px 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .nav-mobile.open { display: flex; }
+  .nav-mobile a {
+    color: var(--chrome); text-decoration: none;
+    font-size: 0.9rem; font-weight: 500; transition: color 0.2s;
+    padding: 0.7rem 1.5rem; width: 100%; box-sizing: border-box;
+  }
+  .nav-mobile a:hover { color: var(--white); background: rgba(255,255,255,0.04); }
+  .nav-mobile .nav-cta {
+    margin: 0.4rem 1rem; width: calc(100% - 2rem); border-radius: 6px;
+    font-size: 0.875rem !important; padding: 0.5rem 1rem;
+    text-align: center; box-sizing: border-box;
+  }
+  .nav-mobile-close { display: none; }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 8rem 2rem 5rem;
+    position: relative; overflow: hidden;
+  }
+  .hero-canvas {
+    position: absolute; inset: 0; z-index: 0;
+    opacity: 0.35;
+  }
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 0.75rem; letter-spacing: 0.2em;
+    color: var(--glow); text-transform: uppercase;
+    margin-bottom: 1.5rem; position: relative; z-index: 1;
+  }
+  .hero-headline {
+    font-family: var(--display);
+    font-size: clamp(1.8rem, 4vw, 3.2rem);
+    font-weight: 800; line-height: 1.08;
+    color: var(--white);
+    max-width: 900px; position: relative; z-index: 1;
+    letter-spacing: -0.02em;
+  }
+  .hero-headline em {
+    font-style: normal;
+    background: linear-gradient(135deg, var(--glow), var(--chrome));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-sub {
+    margin-top: 1.5rem; max-width: 640px;
+    color: var(--muted); font-size: 1.15rem; line-height: 1.7;
+    position: relative; z-index: 1;
+  }
+  .hero-actions {
+    margin-top: 2.5rem; display: flex; gap: 1rem; flex-wrap: wrap;
+    justify-content: center; position: relative; z-index: 1;
+  }
+  .btn-primary {
+    background: var(--cobalt); color: var(--white);
+    padding: 0.85rem 2rem; border-radius: 8px;
+    font-weight: 600; font-size: 0.95rem; text-decoration: none;
+    transition: background 0.2s, transform 0.15s;
+    border: none; cursor: pointer; display: inline-block;
+  }
+  .btn-primary:hover { background: var(--electric); transform: translateY(-1px); }
+  .btn-ghost {
+    background: transparent; color: var(--chrome);
+    padding: 0.85rem 2rem; border-radius: 8px;
+    font-weight: 500; font-size: 0.95rem; text-decoration: none;
+    border: 1px solid rgba(192,207,224,0.25);
+    transition: border-color 0.2s, color 0.2s;
+    display: inline-block;
+  }
+  .btn-ghost:hover { border-color: var(--chrome); color: var(--white); }
+
+  /* ── LIVE STATS (signature element) ── */
+  .live-stats {
+    margin-top: 4rem; display: flex; gap: 3rem; flex-wrap: wrap;
+    justify-content: center; position: relative; z-index: 1;
+  }
+  .stat-item { text-align: center; }
+  .stat-number {
+    font-family: var(--mono); font-size: 2.2rem; font-weight: 500;
+    color: var(--white); display: block; line-height: 1;
+  }
+  .stat-label {
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.15em;
+    color: var(--muted); margin-top: 0.4rem; display: block;
+  }
+  .stat-dot {
+    display: inline-block; width: 6px; height: 6px;
+    background: var(--glow); border-radius: 50%;
+    margin-right: 6px; animation: pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  /* ── SECTIONS ── */
+  .section {
+    padding: 6rem 2rem;
+    max-width: 1200px; margin: 0 auto;
+  }
+  .section-eyebrow {
+    font-family: var(--mono); font-size: 0.72rem;
+    color: var(--glow); letter-spacing: 0.18em; text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+  .section-title {
+    font-family: var(--display); font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+    font-weight: 800; color: var(--white); line-height: 1.15;
+    letter-spacing: -0.02em; max-width: 600px;
+  }
+  .section-sub {
+    margin-top: 1rem; color: var(--muted);
+    font-size: 1.05rem; max-width: 560px; line-height: 1.7;
+  }
+  .divider {
+    width: 100%; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(192,207,224,0.12), transparent);
+    margin: 0;
+  }
+
+  /* ── FIVE FEATURES ── */
+  .features-grid {
+    margin-top: 4rem;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1.25rem;
+  }
+  .feature-card {
+    background: var(--navy-card);
+    border: 1px solid rgba(192,207,224,0.08);
+    border-radius: 16px; overflow: hidden;
+    transition: transform 0.25s, border-color 0.25s;
+    display: flex; flex-direction: column;
+  }
+  .feature-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(74,142,255,0.7);
+    border-width: 2px;
+  }
+  .feature-img {
+    width: 100%;
+    display: block;
+  }
+  .feature-body {
+    padding: 1.1rem; flex: 1;
+    display: flex; flex-direction: column;
+  }
+  .feature-title {
+    font-family: var(--display); font-size: 0.88rem;
+    font-weight: 700; color: var(--white); margin-bottom: 0.4rem;
+    line-height: 1.3;
+  }
+  .feature-desc {
+    color: var(--muted); font-size: 0.78rem; line-height: 1.6; flex: 1;
+  }
+  .feature-tag {
+    display: inline-block; margin-top: 0.75rem;
+    font-family: var(--mono); font-size: 0.62rem;
+    color: var(--glow); letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* ── MARKETS ── */
+  .markets-section { background: var(--navy-mid); }
+  .markets-section .section { padding: 6rem 2rem; }
+  .verticals {
+    margin-top: 3.5rem;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.5rem;
+  }
+  .vertical-card {
+    background: rgba(8,13,26,0.6);
+    border: 1px solid rgba(192,207,224,0.1);
+    border-radius: 12px; padding: 1.75rem 1.5rem;
+    transition: border-color 0.25s, transform 0.2s;
+  }
+  .vertical-card:hover {
+    border-color: rgba(74,142,255,0.7);
+    border-width: 2px;
+    transform: translateY(-3px);
+  }
+  .vertical-num {
+    font-family: var(--mono); font-size: 0.7rem;
+    color: var(--glow); letter-spacing: 0.1em; margin-bottom: 0.75rem;
+  }
+  .vertical-title {
+    font-family: var(--display); font-weight: 700;
+    font-size: 0.95rem; color: var(--white); line-height: 1.3;
+    margin-bottom: 0.6rem;
+  }
+  .vertical-desc {
+    font-size: 0.8rem; color: var(--muted); line-height: 1.55;
+  }
+
+  /* ── HOW IT WORKS ── */
+  .how-grid {
+    margin-top: 3.5rem;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem;
+  }
+  .how-step {
+    padding: 2rem;
+    border-left: 2px solid rgba(74,142,255,0.2);
+    transition: border-color 0.25s;
+  }
+  .how-step:hover { border-left-color: var(--glow); border-left-width: 4px; }
+  .how-step-num {
+    font-family: var(--mono); font-size: 0.7rem;
+    color: var(--glow); letter-spacing: 0.15em; margin-bottom: 1rem;
+  }
+  .how-step-title {
+    font-family: var(--display); font-weight: 700;
+    font-size: 1.05rem; color: var(--white); margin-bottom: 0.5rem;
+  }
+  .how-step-desc { color: var(--muted); font-size: 0.875rem; line-height: 1.65; }
+
+  /* ── CONTACT ── */
+  .contact-section {
+    background: var(--navy-mid);
+    border-top: 1px solid rgba(192,207,224,0.08);
+  }
+  .contact-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 5rem;
+    align-items: start;
+  }
+  .contact-form {
+    display: flex; flex-direction: column; gap: 1.25rem;
+  }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .form-group { display: flex; flex-direction: column; gap: 0.45rem; }
+  .form-label {
+    font-size: 0.8rem; font-weight: 500;
+    color: var(--chrome); letter-spacing: 0.05em;
+  }
+  .form-input, .form-select, .form-textarea {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(192,207,224,0.15);
+    border-radius: 8px; padding: 0.75rem 1rem;
+    color: var(--white); font-family: var(--body); font-size: 0.9rem;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none; border-color: var(--electric);
+  }
+  .form-input::placeholder { color: var(--muted); }
+  .form-textarea { min-height: 120px; resize: vertical; }
+  .form-select option { background: var(--navy-mid); }
+  .contact-promise {
+    margin-top: 0.75rem; font-size: 0.8rem; color: var(--muted);
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--navy);
+    border-top: 1px solid rgba(192,207,224,0.06);
+    padding: 2.5rem 4rem;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 1rem;
+  }
+  .footer-logo {
+    font-family: var(--display); font-weight: 800;
+    font-size: 1.1rem; color: var(--white); letter-spacing: 0.08em;
+  }
+  .footer-logo span { color: var(--glow); }
+  .footer-copy { font-size: 0.8rem; color: var(--muted); }
+  .footer-links { display: flex; gap: 1.5rem; }
+  .footer-links a { font-size: 0.8rem; color: var(--muted); text-decoration: none; }
+  .footer-links a:hover { color: var(--white); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .nav { padding: 1rem 1.5rem; }
+    .nav-right { display: none; }
+    .nav-hamburger-wrap { display: block; }
+    .features-grid { grid-template-columns: repeat(2, 1fr); }
+    .verticals { grid-template-columns: repeat(2, 1fr); }
+    .how-grid { grid-template-columns: 1fr; }
+    .contact-grid { grid-template-columns: 1fr; gap: 3rem; }
+    .form-row { grid-template-columns: 1fr; }
+    footer { flex-direction: column; align-items: flex-start; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stat-dot { animation: none; }
+    * { transition: none !important; }
+  }
+
+  /* alert */
+  .alert-success-landing {
+    background: rgba(10,54,34,0.8); border: 1px solid rgba(74,200,120,0.3);
+    border-radius: 8px; padding: 1rem 1.25rem; color: #74e8a0;
+    font-size: 0.9rem; margin-top: 1rem;
+  }
+  .alert-error-landing {
+    background: rgba(88,21,28,0.8); border: 1px solid rgba(220,53,69,0.3);
+    border-radius: 8px; padding: 1rem 1.25rem; color: #f0a0a8;
+    font-size: 0.9rem; margin-top: 1rem;
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav" id="main-nav">
+  <a href="/" class="nav-logo"><img src="/static/images/noctiv-logo.png" alt="NOCTIV" style="height:45px;width:auto;vertical-align:middle;"></a>
+  <div class="nav-right">
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#markets">Markets</a>
+      <a href="#how">How it works</a>
+      <a href="#contact">Contact</a>
+    </div>
+    <a href="/login" class="nav-cta">Sign in</a>
+  </div>
+  <div class="nav-hamburger-wrap">
+  <button class="nav-hamburger" id="nav-hamburger" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="nav-mobile" id="nav-mobile">
+    <a href="/" style="border-bottom:1px solid rgba(192,207,224,0.08);margin-bottom:0.25rem;color:var(--glow)">← Home</a>
+    <a href="#features">Features</a>
+    <a href="#markets">Markets</a>
+    <a href="#how">How it works</a>
+    <a href="#contact">Contact</a>
+    <a href="/login" class="nav-cta">Sign in</a>
+  </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <canvas class="hero-canvas" id="signalCanvas"></canvas>
+
+  <img src="/static/images/noctiv-logo.png" alt="NOCTIV Broadcast Intelligence"
+       style="height:280px;width:auto;margin-bottom:0.5rem;position:relative;z-index:1;mix-blend-mode:lighten;">
+  <p class="hero-eyebrow"><span class="stat-dot"></span>Live broadcast intelligence — South Africa</p>
+
+  <h1 class="hero-headline">
+    Every word.<br>Every song.<br>Every commercial.<br>
+    <em>Verified.</em>
+  </h1>
+
+  <p class="hero-sub">
+    NOCTIV is an AI-powered broadcast intelligence infrastructure that continuously monitors, transcribes, and analyses radio broadcasts — delivering verified proof of airings, brand mentions, and content intelligence across your entire station network.
+  </p>
+
+  <div class="hero-actions">
+    <a href="#contact" class="btn-primary">Request access</a>
+    <a href="#features" class="btn-ghost">Explore features</a>
+  </div>
+
+  <!-- LIVE STATS — signature element -->
+  <!--<div class="live-stats">
+    <div class="stat-item">
+      <span class="stat-number" id="stat-detections">0</span>
+      <span class="stat-label">commercial detections</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-number" id="stat-hours">0</span>
+      <span class="stat-label">hours monitored</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-number" id="stat-mentions">0</span>
+      <span class="stat-label">keyword mentions</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-number" id="stat-songs">0</span>
+      <span class="stat-label">songs identified</span>
+    </div>
+  </div>-->
+</section>
+
+<div class="divider"></div>
+
+<!-- FIVE FEATURES -->
+<section class="section" id="features">
+  <p class="section-eyebrow">Five core capabilities</p>
+  <h2 class="section-title">Built for broadcast. Designed for intelligence.</h2>
+  <p class="section-sub">Every feature runs continuously across your monitored stations, with results available in real time through the NOCTIV dashboard.</p>
+
+  <div class="features-grid">
+
+    <div class="feature-card">
+      <img src="/static/images/remote-broadcast-monitoring.png" alt="Remote Broadcast Monitoring" class="feature-img">
+      <div class="feature-body">
+        <div class="feature-title">Remote Broadcast Monitoring</div>
+        <div class="feature-desc">Continuous, unattended monitoring of live radio streams — 24 hours a day, 7 days a week. NOCTIV captures every broadcast minute and makes it searchable, auditable, and provable. Whether you're tracking a single station or a national network, every second is accounted for.</div>
+        <div class="feature-tag">→ Always on</div>
+      </div>
+    </div>
+
+    <div class="feature-card">
+      <img src="/static/images/transcripts-archives.png" alt="Transcription and Archive" class="feature-img">
+      <div class="feature-body">
+        <div class="feature-title">Transcription & Content Archive</div>
+        <div class="feature-desc">Every broadcast is automatically transcribed using AI speech recognition. Searchable archives let you find any spoken word, phrase, or topic across months of content in seconds. Play back any segment with live word-level highlighting — like karaoke for radio. Export for compliance reporting, research, or legal evidence.</div>
+        <div class="feature-tag">→ Karaoke-style word playback</div>
+      </div>
+    </div>
+
+    <div class="feature-card">
+      <img src="/static/images/commercial-verification.png" alt="Commercial Monitoring" class="feature-img">
+      <div class="feature-body">
+        <div class="feature-title">Commercial Monitoring & Verification</div>
+        <div class="feature-desc">Register your commercials once. NOCTIV's acoustic fingerprint engine detects every airing across all monitored stations — capturing the exact date, time, and duration of each broadcast. For presenter-read scripts, the pipeline transcribes the broadcast and matches it word-for-word against your registered text — flagging confirmed airings with a karaoke-style transcript so you know exactly what was said. Every detection produces a tamper-evident evidence package delivered to your dashboard within 60 seconds of broadcast.</div>
+        <div class="feature-tag">→ Evidence-grade proof of broadcast</div>
+      </div>
+    </div>
+
+    <div class="feature-card">
+      <img src="/static/images/music-identification.png" alt="Music Identification" class="feature-img">
+      <div class="feature-body">
+        <div class="feature-title">Music Monitoring & Identification</div>
+        <div class="feature-desc">Every song played on every monitored station is identified in real time using audio recognition. Track playlist compliance, verify royalty obligations, analyse music trends, and generate accurate play-count reports — all without manual logging or station cooperation.</div>
+        <div class="feature-tag">→ Every track. Every station.</div>
+      </div>
+    </div>
+
+    <div class="feature-card">
+      <img src="/static/images/word-phrase-monitoring.png" alt="Word and Phrase Monitoring" class="feature-img">
+      <div class="feature-body">
+        <div class="feature-title">Word & Phrase Detection</div>
+        <div class="feature-desc">Subscribe to any keyword, brand name, phrase, or topic and receive an alert the moment it's spoken on radio — with a timestamped audio clip as evidence. Monitor brand mentions, competitor activity, political messaging, regulatory announcements, crisis keywords, or any content that matters to your organisation. Results arrive within minutes of broadcast, not hours.</div>
+        <div class="feature-tag">→ Real-time alerts</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- MARKETS -->
+<div class="markets-section" id="markets">
+<section class="section">
+  <p class="section-eyebrow">Who it's built for</p>
+  <h2 class="section-title">Six industries. One infrastructure.</h2>
+  <p class="section-sub">NOCTIV serves every organisation that depends on what's said, played, or advertised on radio.</p>
+
+  <div class="verticals">
+
+    <div class="vertical-card">
+      <!--<div class="vertical-num">01</div>-->
+      <div class="vertical-title">Advertising & Media Verification</div>
+      <div class="vertical-desc">Prove that paid radio commercials aired at contracted times. Eliminate billing disputes and provide advertisers with timestamped, clip-verified proof of broadcast.</div>
+    </div>
+
+    <div class="vertical-card">
+      <!--<div class="vertical-num">02</div>-->
+      <div class="vertical-title">Brand & Reputation Intelligence</div>
+      <div class="vertical-desc">Track every mention of your brand, product, executives, and competitors across radio. Know what's being said the moment it's broadcast.</div>
+    </div>
+
+    <div class="vertical-card">
+      <!--<div class="vertical-num">03</div>-->
+      <div class="vertical-title">Broadcast Compliance & Regulation</div>
+      <div class="vertical-desc">Monitor adherence to broadcasting regulations, mandatory announcements, and content requirements. Searchable archives provide audit-ready evidence for regulatory bodies.</div>
+    </div>
+
+    <div class="vertical-card">
+      <!--<div class="vertical-num">04</div>-->
+      <div class="vertical-title">Music & Content Analytics</div>
+      <div class="vertical-desc">Verify playlist compliance, track song airplay for royalty reporting, and analyse broadcast content trends across your station network.</div>
+    </div>
+
+    <div class="vertical-card">
+      <!--<div class="vertical-num">05</div>-->
+      <div class="vertical-title">Government, Security & Situational Awareness</div>
+      <div class="vertical-desc">Monitor broadcasts for crisis keywords, emergency information, political messaging, and regulatory compliance in real time. NOCTIV's Frequency Spectrum Analysis (FSA) module extends coverage to physical RF monitoring — detecting unlicensed transmitters and spectrum violations for ICASA enforcement and field inspection teams.</div>
+    </div>
+
+  </div>
+</section>
+</div>
+
+<div class="divider"></div>
+
+<!-- HOW IT WORKS -->
+<section class="section" id="how">
+  <p class="section-eyebrow">How it works</p>
+  <h2 class="section-title">From broadcast to intelligence in minutes.</h2>
+
+  <div class="how-grid">
+    <div class="how-step">
+      <div class="how-step-num">STEP 1</div>
+      <div class="how-step-title">Connect your stations</div>
+      <div class="how-step-desc">NOCTIV connects to your radio stations' live streams. No hardware installation required. Coverage begins immediately — 24/7, without interruption.</div>
+    </div>
+    <div class="how-step">
+      <div class="how-step-num">STEP 2</div>
+      <div class="how-step-title">Register what matters</div>
+      <div class="how-step-desc">Upload your commercials, subscribe to songs, or set keyword alerts. NOCTIV starts watching for your content within 60 seconds of registration.</div>
+    </div>
+    <div class="how-step">
+      <div class="how-step-num">STEP 3</div>
+      <div class="how-step-title">Receive verified intelligence</div>
+      <div class="how-step-desc">Every detection is timestamped, tamper-evident, and delivered to your dashboard within 60 seconds of broadcast. Play back any clip with word-level karaoke highlighting, download a Proof of Broadcast certificate, or pull data via API — on demand.</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- CONTACT -->
+<div class="contact-section" id="contact">
+<section class="section">
+  <div class="contact-grid">
+    <div>
+      <p class="section-eyebrow">Request access</p>
+      <h2 class="section-title">Ready to know what's being broadcast?</h2>
+      <p class="section-sub" style="margin-top:1.25rem">NOCTIV is currently available by invitation. Tell us about your organisation and we'll be in touch within one business day.</p>
+
+      <div style="margin-top:2.5rem; display:flex; flex-direction:column; gap:1.25rem;">
+        <div style="display:flex; align-items:flex-start; gap:0.75rem;">
+          <span style="color:var(--glow); margin-top:2px;">✓</span>
+          <div>
+            <div style="font-weight:600; color:var(--white); font-size:0.9rem;">No commitment required</div>
+            <div style="color:var(--muted); font-size:0.85rem;">We'll discuss your requirements and propose the right plan for your organisation.</div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:flex-start; gap:0.75rem;">
+          <span style="color:var(--glow); margin-top:2px;">✓</span>
+          <div>
+            <div style="font-weight:600; color:var(--white); font-size:0.9rem;">Trial access available</div>
+            <div style="color:var(--muted); font-size:0.85rem;">New organisations receive a free trial allocation to experience NOCTIV on your own stations before committing.</div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:flex-start; gap:0.75rem;">
+          <span style="color:var(--glow); margin-top:2px;">✓</span>
+          <div>
+            <div style="font-weight:600; color:var(--white); font-size:0.9rem;">Response within one business day</div>
+            <div style="color:var(--muted); font-size:0.85rem;">Every enquiry is reviewed personally. You'll speak to someone who understands your industry.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      {% if enquiry_sent %}
+      <div class="alert-success-landing">
+        ✓ Thank you — your enquiry has been received. We'll be in touch within one business day.
+      </div>
+      {% elif enquiry_error %}
+      <div class="alert-error-landing">
+        Something went wrong sending your enquiry. Please try again or email us directly.
+      </div>
+      {% endif %}
+
+      <form method="post" action="/enquiry" class="contact-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">First name</label>
+            <input type="text" name="first_name" class="form-input" placeholder="Jane" required value="{{ form.first_name or '' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last name</label>
+            <input type="text" name="last_name" class="form-input" placeholder="Smith" required value="{{ form.last_name or '' }}">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Work email</label>
+          <input type="email" name="email" class="form-input" placeholder="jane@company.co.za" required value="{{ form.email or '' }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Company / Organisation</label>
+          <input type="text" name="company" class="form-input" placeholder="Your company name" required value="{{ form.company or '' }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">I'm primarily interested in</label>
+          <select name="interest" class="form-select" required>
+            <option value="" disabled selected>Select your primary use case</option>
+            <option value="advertising">Advertising verification &amp; proof of broadcast</option>
+            <option value="brand">Brand &amp; reputation monitoring</option>
+            <option value="compliance">Broadcast compliance &amp; regulation</option>
+            <option value="music">Music monitoring &amp; royalty tracking</option>
+            <option value="government">Government, security &amp; situational awareness</option>
+            <option value="research">Media research &amp; analytics</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tell us about your requirements <span style="color:var(--muted)">(optional)</span></label>
+          <textarea name="message" class="form-textarea" placeholder="Which stations do you want to monitor? How many commercials are you running? What's your primary goal?">{{ form.message or '' }}</textarea>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%; padding:1rem; font-size:1rem; border-radius:8px;">
+          Request access →
+        </button>
+        <p class="contact-promise">
+          <span style="color:var(--glow)">🔒</span>
+          Your information is used only to respond to your enquiry.
+        </p>
+      </form>
+    </div>
+  </div>
+</section>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <img src="/static/images/noctiv-logo.png" alt="NOCTIV" style="height:48px;width:auto;">
+  <div class="footer-copy">© 2026 NOCTIV. All rights reserved.</div>
+  <div class="footer-links">
+    <a href="/login">Sign in</a>
+    <a href="#contact">Contact</a>
+  </div>
+</footer>
+
+<script>
+// ── SIGNAL CANVAS — ambient radial pulse ──
+(function() {
+  const canvas = document.getElementById('signalCanvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, rings = [];
+
+  function resize() {
+    W = canvas.width = canvas.offsetWidth;
+    H = canvas.height = canvas.offsetHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function spawnRing() {
+    rings.push({ r: 0, alpha: 0.6, speed: 0.8 });
+  }
+  setInterval(spawnRing, 900);
+  spawnRing();
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    const cx = W / 2, cy = H / 2;
+    rings = rings.filter(ring => ring.alpha > 0.01);
+    rings.forEach(ring => {
+      ctx.beginPath();
+      ctx.arc(cx, cy, ring.r, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(45, 107, 228, ${ring.alpha})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ring.r += ring.speed;
+      ring.alpha *= 0.985;
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── LIVE STATS counter animation ──
+(function() {
+  const targets = {
+    'stat-detections': { value: 0, target: 48291, suffix: '' },
+    'stat-hours':      { value: 0, target: 12480, suffix: '' },
+    'stat-mentions':   { value: 0, target: 9347,  suffix: '' },
+    'stat-songs':      { value: 0, target: 31856, suffix: '' },
+  };
+
+  function formatNum(n) {
+    return Math.floor(n).toLocaleString('en-ZA');
+  }
+
+  function animate() {
+    let allDone = true;
+    for (const [id, s] of Object.entries(targets)) {
+      if (s.value < s.target) {
+        s.value += (s.target - s.value) * 0.04;
+        if (s.target - s.value < 1) s.value = s.target;
+        document.getElementById(id).textContent = formatNum(s.value) + s.suffix;
+        allDone = false;
+      }
+    }
+    if (!allDone) requestAnimationFrame(animate);
+  }
+
+  // Trigger when hero is visible
+  const observer = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) { animate(); observer.disconnect(); }
+  }, { threshold: 0.3 });
+  observer.observe(document.querySelector('.live-stats'));
+
+  // Slowly increment stats after initial animation
+  setTimeout(function tick() {
+    const el = document.getElementById('stat-detections');
+    if (el) {
+      targets['stat-detections'].target += Math.floor(Math.random() * 3);
+      targets['stat-hours'].target += Math.random() > 0.7 ? 1 : 0;
+      targets['stat-mentions'].target += Math.floor(Math.random() * 2);
+      targets['stat-songs'].target += Math.floor(Math.random() * 2);
+      animate();
+    }
+    setTimeout(tick, 3000 + Math.random() * 2000);
+  }, 4000);
+})();
+</script>
+<script>
+(function() {
+  var hamburger = document.getElementById('nav-hamburger');
+  var menu      = document.getElementById('nav-mobile');
+  if (!hamburger || !menu) return;
+
+  // Toggle on hamburger click
+  hamburger.addEventListener('click', function(e) {
+    e.stopPropagation();
+    menu.classList.toggle('open');
+  });
+
+  // Close when a menu link is clicked
+  menu.querySelectorAll('a').forEach(function(a) {
+    a.addEventListener('click', function() {
+      menu.classList.remove('open');
+    });
+  });
+
+  // Close when clicking outside
+  document.addEventListener('click', function(e) {
+    if (!document.getElementById('main-nav').contains(e.target)) {
+      menu.classList.remove('open');
+    }
+  });
+})();
+</script>
+</body>
+</html>

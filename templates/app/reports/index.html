@@ -1,0 +1,149 @@
+{% extends "base_app.html" %}
+{% block title %}Reports — NOCTIV{% endblock %}
+{% block topbar_title %}Reports{% endblock %}
+
+{% block content %}
+<style>
+.report-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-decoration: none;
+  display: block;
+  transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+  position: relative; overflow: hidden;
+}
+.report-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--cobalt), var(--glow));
+  opacity: 0; transition: opacity 0.2s;
+}
+.report-card:hover {
+  border-color: var(--border-h);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+.report-card:hover::before { opacity: 1; }
+.report-card-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: rgba(45,107,228,0.15);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+.report-card-title {
+  font-family: var(--display); font-size: 1rem;
+  font-weight: 700; color: var(--white);
+  margin-bottom: 0.35rem;
+}
+.report-card-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+.report-card-tag {
+  display: inline-block; margin-top: 0.85rem;
+  font-family: var(--mono); font-size: 0.62rem;
+  color: var(--glow); letter-spacing: 0.1em; text-transform: uppercase;
+}
+.report-card-soon { opacity: 0.45; pointer-events: none; }
+.report-card-soon::after {
+  content: 'COMING SOON';
+  position: absolute; top: 1rem; right: 1rem;
+  font-family: var(--mono); font-size: 0.58rem;
+  color: var(--muted); letter-spacing: 0.12em;
+  border: 1px solid var(--border); border-radius: 4px;
+  padding: 2px 6px;
+}
+.report-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+.section-label {
+  font-family: var(--mono); font-size: 0.65rem;
+  color: var(--muted); letter-spacing: 0.14em;
+  text-transform: uppercase; margin: 1.75rem 0 0.85rem;
+}
+.section-label:first-of-type { margin-top: 0; }
+</style>
+
+<div class="page-eyebrow">NOCTIV</div>
+<div class="page-header">
+  <h1>Reports</h1>
+</div>
+
+<div class="section-label">Commercial Monitoring</div>
+<div class="report-grid">
+
+  <a href="/reports/detection" class="report-card">
+    <div class="report-card-icon">📡</div>
+    <div class="report-card-title">Detection Report</div>
+    <div class="report-card-desc">Full log of commercial airplay detections across stations, with match scores, timing, and per-station breakdowns.</div>
+    <div class="report-card-tag">→ Run report</div>
+  </a>
+
+  <a href="#" class="report-card report-card-soon">
+    <div class="report-card-icon">📊</div>
+    <div class="report-card-title">Campaign Performance</div>
+    <div class="report-card-desc">Plays per campaign per station, first and last air times, and trend charts over your campaign period.</div>
+  </a>
+
+  <a href="/reports/pob" class="report-card">
+    <div class="report-card-icon">📄</div>
+    <div class="report-card-title">Proof of Broadcast</div>
+    <div class="report-card-desc">Certifiable broadcast proof — timestamps, station, clip references, and detection confidence for each airing.</div>
+    <div class="report-card-tag">→ Generate certificate</div>
+  </a>
+
+</div>
+
+<div class="section-label">Song Monitoring</div>
+<div class="report-grid">
+
+  <a href="/reports/songs" class="report-card">
+    <div class="report-card-icon">🎵</div>
+    <div class="report-card-title">Song Monitoring Report</div>
+    <div class="report-card-desc">Airplay log for subscribed songs: station, date, time, total airtime seconds, and play count trends.</div>
+    <div class="report-card-tag">→ Run report</div>
+  </a>
+
+  <a href="#" class="report-card report-card-soon">
+    <div class="report-card-icon">📈</div>
+    <div class="report-card-title">Song Airtime Summary</div>
+    <div class="report-card-desc">Daily and weekly airtime totals per artist and title across all monitored stations.</div>
+  </a>
+
+</div>
+
+<div class="section-label">Keywords & Phrases</div>
+<div class="report-grid">
+
+  <a href="/reports/keywords" class="report-card">
+    <div class="report-card-icon">🔍</div>
+    <div class="report-card-title">Keyword Detection Export</div>
+    <div class="report-card-desc">Every keyword hit with context timestamps, station, and clip reference — exportable for compliance or media monitoring.</div>
+    <div class="report-card-tag">→ Run report</div>
+  </a>
+
+</div>
+
+<div class="section-label">Billing & Usage</div>
+<div class="report-grid">
+
+  <a href="/reports/invoice" class="report-card">
+    <div class="report-card-icon">🧾</div>
+    <div class="report-card-title">Invoice Report</div>
+    <div class="report-card-desc">NOCTIV usage invoice for your account — credits consumed, ZAR values, and transaction history for a billing period.</div>
+    <div class="report-card-tag">→ Run report</div>
+  </a>
+
+  {% if user.user_type.value == "internal" %}
+  <a href="#" class="report-card report-card-soon">
+    <div class="report-card-icon">📉</div>
+    <div class="report-card-title">Internal Usage Log</div>
+    <div class="report-card-desc">Platform-wide revenue and usage breakdown by category, subscriber, and week or month. Internal admin only.</div>
+  </a>
+  {% endif %}
+
+</div>
+
+{% endblock %}

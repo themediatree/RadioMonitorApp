@@ -1,0 +1,51 @@
+{% extends "base_app.html" %}
+{% from "macros/station_picker.html" import station_picker %}
+{% block title %}Permissions — NOCTIV{% endblock %}
+{% block topbar_title %}Permissions{% endblock %}
+{% block content %}
+<div class="page-eyebrow">Account</div>
+<header class="page-header">
+    <h1>{{ target.FullName or target.Email }}</h1>
+    <a href="/account/team" class="nav-link">← Back to team</a>
+</header>
+
+{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+<div class="card form-card">
+<form method="post" action="/account/team/{{ target.UserID }}/permissions">
+
+    <div class="form-field">
+        <span class="form-label">Station access</span>
+        <div style="display:flex;gap:1.5rem;margin-bottom:0.75rem">
+            <label class="checkbox-label">
+                <input type="radio" name="restriction_mode" value="unrestricted"
+                       {{ 'checked' if not target.HasStationRestrictions }}
+                       onchange="document.getElementById('station-restriction-box').style.display='none'">
+                All stations
+            </label>
+            <label class="checkbox-label">
+                <input type="radio" name="restriction_mode" value="restricted"
+                       {{ 'checked' if target.HasStationRestrictions }}
+                       onchange="document.getElementById('station-restriction-box').style.display=''">
+                Restrict to specific stations
+            </label>
+        </div>
+        <div id="station-restriction-box" style="display:{{ 'none' if not target.HasStationRestrictions else '' }}">
+            {{ station_picker(all_stations, selected_ids=current_station_ids, field_id="permission-stations") }}
+        </div>
+    </div>
+
+    <div class="form-field">
+        <label class="checkbox-label">
+            <input type="checkbox" name="can_download" {{ 'checked' if target.CanDownload }}>
+            Allow downloading clips and exporting reports
+        </label>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Save permissions</button>
+        <a href="/account/team" class="btn btn-ghost">Cancel</a>
+    </div>
+</form>
+</div>
+{% endblock %}

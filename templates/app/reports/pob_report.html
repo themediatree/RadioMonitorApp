@@ -1,0 +1,447 @@
+{% extends "base_app.html" %}
+{% block title %}Proof of Broadcast — NOCTIV{% endblock %}
+{% block topbar_title %}Proof of Broadcast{% endblock %}
+
+{% block content %}
+<style>
+.report-eyebrow {
+  font-family: var(--mono); font-size: 0.62rem;
+  color: var(--glow); letter-spacing: 0.18em;
+  text-transform: uppercase; margin-bottom: 0.4rem;
+}
+.report-hero {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 1.5rem;
+  margin-bottom: 2rem; flex-wrap: wrap;
+}
+.report-hero h1 {
+  font-family: var(--display); font-size: 1.75rem;
+  font-weight: 800; color: var(--white);
+  letter-spacing: -0.02em; line-height: 1.1;
+}
+.report-hero-meta { font-size: 0.78rem; color: var(--muted); margin-top: 0.4rem; }
+.report-hero-actions { display: flex; gap: 0.5rem; flex-shrink: 0; align-items: flex-start; }
+
+.filter-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 1.25rem; margin-bottom: 1.75rem;
+}
+.filter-card-title {
+  font-family: var(--mono); font-size: 0.65rem;
+  color: var(--muted); letter-spacing: 0.12em;
+  text-transform: uppercase; margin-bottom: 1rem;
+}
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem; align-items: end;
+}
+
+/* Certificate header */
+.cert-header {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.75rem 2rem;
+  margin-bottom: 1.5rem;
+  position: relative; overflow: hidden;
+}
+.cert-header::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--cobalt), var(--glow), #7c4dff);
+}
+.cert-header-inner {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; gap: 2rem; flex-wrap: wrap;
+}
+.cert-brand {
+  font-family: var(--display); font-size: 1.5rem;
+  font-weight: 800; color: var(--white); letter-spacing: -0.02em;
+}
+.cert-brand span { color: var(--glow); }
+.cert-title {
+  font-family: var(--mono); font-size: 0.65rem;
+  color: var(--muted); letter-spacing: 0.14em;
+  text-transform: uppercase; margin-top: 0.3rem;
+}
+.cert-meta { text-align: right; }
+.cert-number {
+  font-family: var(--mono); font-size: 0.75rem;
+  color: var(--glow); letter-spacing: 0.08em;
+}
+.cert-date { font-size: 0.75rem; color: var(--muted); margin-top: 0.25rem; }
+.cert-addressee {
+  margin-top: 1.25rem; padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem;
+}
+.cert-field-label {
+  font-family: var(--mono); font-size: 0.6rem;
+  color: var(--muted); letter-spacing: 0.1em;
+  text-transform: uppercase; margin-bottom: 0.25rem;
+}
+.cert-field-value { font-size: 0.85rem; color: var(--pale); font-weight: 500; }
+
+/* Summary strip */
+.stat-strip {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1rem; margin-bottom: 1.5rem;
+}
+.stat-strip-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 1rem 1.25rem;
+  position: relative; overflow: hidden;
+}
+.stat-strip-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--cobalt), var(--glow));
+}
+.stat-strip-card.accent-green::before  { background: linear-gradient(90deg, #00c853, #00e676); }
+.stat-strip-card.accent-purple::before { background: linear-gradient(90deg, #7c4dff, #b388ff); }
+.stat-strip-label {
+  font-family: var(--mono); font-size: 0.62rem;
+  color: var(--muted); letter-spacing: 0.1em;
+  text-transform: uppercase; margin-bottom: 0.5rem;
+}
+.stat-strip-value {
+  font-family: var(--mono); font-size: 2rem;
+  font-weight: 500; color: var(--white); line-height: 1;
+}
+.stat-strip-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; }
+
+/* Commercial evidence blocks */
+.commercial-block {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden; margin-bottom: 1.25rem;
+}
+.commercial-block-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  background: rgba(45,107,228,0.06);
+  gap: 1rem; flex-wrap: wrap;
+}
+.commercial-tape-id {
+  font-family: var(--mono); font-size: 1rem;
+  font-weight: 600; color: var(--white);
+}
+.commercial-brand {
+  font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem;
+}
+.commercial-meta {
+  display: flex; gap: 1.5rem; align-items: center; flex-shrink: 0;
+}
+.commercial-meta-item { text-align: right; }
+.commercial-meta-label {
+  font-family: var(--mono); font-size: 0.6rem;
+  color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase;
+}
+.commercial-meta-value {
+  font-family: var(--mono); font-size: 0.82rem;
+  color: var(--pale); font-weight: 500;
+}
+.airing-count-badge {
+  background: rgba(45,107,228,0.15);
+  border: 1px solid rgba(45,107,228,0.25);
+  color: #4a8eff;
+  font-family: var(--mono); font-size: 0.7rem;
+  border-radius: 20px; padding: 3px 12px; white-space: nowrap;
+}
+
+.match-bar-wrap { display: flex; align-items: center; gap: 0.4rem; }
+.match-bar { width: 40px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.match-bar-fill { height: 100%; border-radius: 2px; background: var(--glow); }
+.match-pct { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); }
+
+.empty-state { text-align: center; padding: 4rem 2rem; color: var(--muted); }
+.empty-state-icon { font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.4; }
+.empty-state-title { font-family: var(--display); font-size: 1rem; color: var(--chrome); margin-bottom: 0.4rem; }
+</style>
+
+<div class="report-eyebrow">Reports / Proof of Broadcast</div>
+<div class="report-hero">
+  <div>
+    <h1>Proof of Broadcast</h1>
+    <div class="report-hero-meta">
+      Certified airplay evidence for your commercials
+      {% if result %}· Generated {{ result.generated_at.strftime("%d %b %Y %H:%M") }} UTC{% endif %}
+    </div>
+  </div>
+  <div class="report-hero-actions">
+    {% if result and result.commercials %}
+    <a href="/reports/pob/pdf?{{ request.query_string.decode() }}"
+       class="btn btn-primary" target="_blank">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Export PDF
+    </a>
+    {% endif %}
+    <a href="/reports" class="btn btn-ghost">← All Reports</a>
+  </div>
+</div>
+
+<!-- FILTER CARD -->
+<div class="filter-card">
+  <div class="filter-card-title">Filter</div>
+  <form method="get" action="/reports/pob">
+    <div class="filter-grid">
+      <div class="form-field">
+        <label class="form-label">From</label>
+        <input type="date" name="date_from" class="form-input" value="{{ filters.date_from or '' }}">
+      </div>
+      <div class="form-field">
+        <label class="form-label">To</label>
+        <input type="date" name="date_to" class="form-input" value="{{ filters.date_to or '' }}">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Station</label>
+        <select name="station_id" class="form-select">
+          <option value="">All stations</option>
+          {% for st in stations %}
+          <option value="{{ st.StationID }}" {% if filters.station_id == st.StationID|string %}selected{% endif %}>
+            {{ st.StationName }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-field" style="position:relative">
+        <label class="form-label">Commercial</label>
+        <input type="text" id="commercial-search" class="form-input"
+               placeholder="Search…" autocomplete="off"
+               value="{{ filters.commercial_name or '' }}"
+               oninput="filterCommercials(this.value)">
+        <input type="hidden" name="commercial_name" id="commercial-name-val"
+               value="{{ filters.commercial_name or '' }}">
+        <div id="commercial-dropdown" class="station-picker-dropdown" style="max-height:200px">
+          <div id="commercial-options">
+            {% for tape_id, _ in commercials %}
+            <div class="station-picker-option" data-value="{{ tape_id }}"
+                 onclick="selectCommercial('{{ tape_id }}')">{{ tape_id }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="form-field" style="position:relative">
+        <label class="form-label">Campaign</label>
+        <input type="text" id="campaign-search" class="form-input"
+               placeholder="Search…" autocomplete="off"
+               value="{{ filters.campaign_id and (campaigns | selectattr('0', 'equalto', filters.campaign_id|int) | map(attribute='1') | first) or '' }}"
+               oninput="filterCampaigns(this.value)">
+        <input type="hidden" name="campaign_id" id="campaign-id-val"
+               value="{{ filters.campaign_id or '' }}">
+        <div id="campaign-dropdown" class="station-picker-dropdown" style="max-height:200px">
+          <div id="campaign-options">
+            {% for cid, cname in campaigns %}
+            <div class="station-picker-option" data-value="{{ cid }}" data-label="{{ cname }}"
+                 onclick="selectCampaign('{{ cid }}', '{{ cname }}')">{{ cname }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="form-field" style="align-self:end">
+        <button type="submit" class="btn btn-primary" style="width:100%">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          Generate Certificate
+        </button>
+      </div>
+      <div class="form-field" style="align-self:end">
+        <a href="/reports/pob?all=1" class="btn btn-ghost" style="width:100%;text-align:center">
+          All Airplay
+        </a>
+      </div>
+    </div>
+  </form>
+</div>
+
+{% if result %}
+
+<!-- CERTIFICATE HEADER -->
+<div class="cert-header">
+  <div class="cert-header-inner">
+    <div>
+      <div class="cert-brand">NOC<span>TIV</span></div>
+      <div class="cert-title">RadioMonitor · Certificate of Broadcast</div>
+    </div>
+    <div class="cert-meta">
+      <div class="cert-number">{{ result.certificate_number }}</div>
+      <div class="cert-date">Issued {{ result.generated_at.strftime("%d %B %Y") }}</div>
+    </div>
+  </div>
+  <div class="cert-addressee">
+    <div>
+      <div class="cert-field-label">Issued To</div>
+      <div class="cert-field-value">{{ result.subscriber_company }}</div>
+    </div>
+    <div>
+      <div class="cert-field-label">Period</div>
+      <div class="cert-field-value">
+        {{ result.date_from.strftime("%d %b %Y") if result.date_from else "All dates" }}
+        {% if result.date_to %} – {{ result.date_to.strftime("%d %b %Y") }}{% endif %}
+      </div>
+    </div>
+    <div>
+      <div class="cert-field-label">Monitored Stations</div>
+      <div class="cert-field-value">{{ result.all_stations | join(", ") or "All" }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- SUMMARY STRIP -->
+<div class="stat-strip">
+  <div class="stat-strip-card">
+    <div class="stat-strip-label">Total Airings</div>
+    <div class="stat-strip-value">{{ result.total_airings }}</div>
+    <div class="stat-strip-sub">confirmed broadcasts</div>
+  </div>
+  <div class="stat-strip-card accent-green">
+    <div class="stat-strip-label">Commercials</div>
+    <div class="stat-strip-value">{{ result.total_commercials }}</div>
+    <div class="stat-strip-sub">unique spots certified</div>
+  </div>
+  <div class="stat-strip-card accent-purple">
+    <div class="stat-strip-label">Stations</div>
+    <div class="stat-strip-value">{{ result.all_stations | length }}</div>
+    <div class="stat-strip-sub">stations with airplay</div>
+  </div>
+</div>
+
+{% if result.commercials %}
+
+<!-- COMMERCIAL EVIDENCE BLOCKS -->
+{% for comm in result.commercials %}
+<div class="commercial-block">
+  <div class="commercial-block-header">
+    <div>
+      <div class="commercial-tape-id">{{ comm.display_tape_id }}</div>
+      <div class="commercial-brand">
+        {% if comm.brand %}{{ comm.brand }} · {% endif %}
+        Campaign: {{ comm.campaign_name }} ·
+        {{ comm.date_range }} ·
+        Stations: {{ comm.stations | join(", ") }}
+      </div>
+    </div>
+    <div class="commercial-meta">
+      <div class="commercial-meta-item">
+        <div class="commercial-meta-label">Airings</div>
+        <div class="commercial-meta-value">{{ comm.total_airings }}</div>
+      </div>
+      <span class="airing-count-badge">{{ comm.total_airings }} confirmed airing{{ 's' if comm.total_airings != 1 else '' }}</span>
+    </div>
+  </div>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Station</th>
+          <th>Start Time</th>
+          <th>End Time</th>
+          <th>Type</th>
+          <th>Clip</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for airing in comm.airings %}
+        <tr>
+          <td style="font-family:var(--mono);font-size:0.72rem;color:var(--muted)">{{ loop.index }}</td>
+          <td class="nowrap" style="font-family:var(--mono);font-size:0.75rem">{{ airing.chunk_date }}</td>
+          <td class="nowrap">
+            <span style="font-family:var(--mono);font-size:0.75rem;
+                         background:rgba(45,107,228,0.12);
+                         border:1px solid rgba(45,107,228,0.2);
+                         border-radius:4px;padding:2px 8px">
+              {{ airing.station_name }}
+            </span>
+          </td>
+          <td class="nowrap" style="font-family:var(--mono);font-size:0.82rem;color:var(--white);font-weight:500">{{ airing.start_clock }}</td>
+          <td class="nowrap" style="font-family:var(--mono);font-size:0.78rem;color:var(--muted)">{{ airing.end_clock }}</td>
+          <td><span class="badge cat-{{ airing.category | lower }}">{{ airing.category }}</span></td>
+          <td>
+            {% if airing.clip_url %}
+            <a href="{{ airing.clip_url[0] }}" target="_blank"
+               style="display:inline-flex;align-items:center;justify-content:center;
+                      width:28px;height:28px;border-radius:50%;
+                      background:rgba(45,107,228,0.15);border:1px solid rgba(45,107,228,0.25);
+                      color:#4a8eff;text-decoration:none" title="Play clip">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
+                <polygon points="5,3 19,12 5,21"/>
+              </svg>
+            </a>
+            {% else %}
+            <span class="muted" style="font-size:0.72rem">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+
+{% else %}
+<div class="commercial-block">
+  <div class="empty-state">
+    <div class="empty-state-icon">📭</div>
+    <div class="empty-state-title">No airings found</div>
+    <p class="muted small" style="margin-top:0.4rem">No detected airplay for the selected filters.</p>
+  </div>
+</div>
+{% endif %}
+
+{% else %}
+<div style="background:var(--card);border:1px solid var(--border);border-radius:12px">
+  <div class="empty-state">
+    <div class="empty-state-icon" style="opacity:0.5">📋</div>
+    <div class="empty-state-title">Set your filters and generate the certificate</div>
+    <p class="muted small" style="margin-top:0.4rem">
+      Select a date range or commercial, then click
+      <strong style="color:var(--chrome)">Generate Certificate</strong>.
+    </p>
+  </div>
+</div>
+{% endif %}
+
+{% block scripts %}
+<script>
+var commDropdown = document.getElementById('commercial-dropdown');
+var commSearch   = document.getElementById('commercial-search');
+var commVal      = document.getElementById('commercial-name-val');
+
+commSearch.addEventListener('focus', function() { commDropdown.classList.add('open'); filterCommercials(this.value); });
+document.addEventListener('click', function(e) {
+  if (!commSearch.contains(e.target) && !commDropdown.contains(e.target)) commDropdown.classList.remove('open');
+  if (campSearch && !campSearch.contains(e.target) && !campDropdown.contains(e.target)) campDropdown.classList.remove('open');
+});
+function filterCommercials(q) {
+  commDropdown.classList.add('open');
+  document.querySelectorAll('#commercial-options .station-picker-option').forEach(function(o) {
+    o.style.display = o.dataset.value.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+function selectCommercial(val) { commSearch.value = val; commVal.value = val; commDropdown.classList.remove('open'); }
+commSearch.addEventListener('input', function() { if (!this.value) commVal.value = ''; });
+
+var campDropdown = document.getElementById('campaign-dropdown');
+var campSearch   = document.getElementById('campaign-search');
+var campVal      = document.getElementById('campaign-id-val');
+
+campSearch.addEventListener('focus', function() { campDropdown.classList.add('open'); filterCampaigns(this.value); });
+function filterCampaigns(q) {
+  campDropdown.classList.add('open');
+  document.querySelectorAll('#campaign-options .station-picker-option').forEach(function(o) {
+    o.style.display = o.dataset.label.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+function selectCampaign(id, label) { campSearch.value = label; campVal.value = id; campDropdown.classList.remove('open'); }
+campSearch.addEventListener('input', function() { if (!this.value) campVal.value = ''; });
+</script>
+{% endblock %}
+
+{% endblock %}

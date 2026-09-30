@@ -1,0 +1,127 @@
+{% extends "base_app.html" %}
+{% block title %}{{ "Edit" if subscriber else "New" }} Subscriber — RadioMonitor{% endblock %}
+{% block topbar_title %}{{ "Edit" if subscriber else "New" }} Subscriber{% endblock %}
+{% block content %}
+    <header class="page-header">
+        <h1>{{ "Edit" if subscriber else "New" }} Subscriber</h1>
+        <a href="/admin/subscribers" class="nav-link">← Back to subscribers</a>
+    </header>
+    {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+    <form method="post" action="{{ '/admin/subscribers/' ~ subscriber.SubscriberID if subscriber else '/admin/subscribers' }}" class="card form-card">
+
+        <label class="form-field">
+            <span class="form-label">Contact name</span>
+            <input name="name" class="form-input" required value="{{ subscriber.Name if subscriber else form.get('name','') }}">
+        </label>
+        <label class="form-field">
+            <span class="form-label">Company / Entity name</span>
+            <input name="company_name" class="form-input" placeholder="e.g. Pick & Pay Stores Ltd" value="{{ subscriber.CompanyName if subscriber else form.get('company_name','') }}">
+        </label>
+
+        {% if not subscriber %}
+        <label class="form-field">
+            <span class="form-label">Type</span>
+            <select name="subscriber_type" class="form-input" required id="type-sel">
+                {% for t in types %}
+                <option value="{{ t }}" {{ 'selected' if form.get('subscriber_type')==t }}>{{ t }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        {% if available_stations %}
+        <label class="form-field" id="station-field" style="display:none">
+            <span class="form-label">Station</span>
+            <select name="station_id" class="form-input">
+                <option value="">— select —</option>
+                {% for st in available_stations %}
+                <option value="{{ st.StationID }}" {{ 'selected' if form.get('station_id')==st.StationID }}>{{ st.StationName }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        {% endif %}
+        <label class="form-field" id="other-field" style="display:none">
+            <span class="form-label">Description (required for Other)</span>
+            <input name="other_description" class="form-input" value="{{ form.get('other_description','') }}">
+        </label>
+        {% else %}
+        <p class="muted small">Type: <strong>{{ subscriber.SubscriberType }}</strong> (cannot change after creation)</p>
+        {% if subscriber.OtherDescription %}
+        <label class="form-field">
+            <span class="form-label">Description</span>
+            <input name="other_description" class="form-input" value="{{ subscriber.OtherDescription or '' }}">
+        </label>
+        {% endif %}
+        {% endif %}
+
+        <label class="form-field">
+            <span class="form-label">Plan</span>
+            <select name="plan" class="form-input" required>
+                {% for p in plans %}
+                <option value="{{ p.PlanCode }}" {{ 'selected' if (subscriber and subscriber.SubscriptionPlan==p.PlanCode) or form.get('plan')==p.PlanCode }}>{{ p.DisplayName }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="form-field">
+            <span class="form-label">Status</span>
+            <select name="status" class="form-input">
+                {% for st in statuses %}
+                <option value="{{ st }}" {{ 'selected' if (subscriber and subscriber.SubscriberStatus==st) or form.get('status')==st }}>{{ st }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="form-field">
+            <span class="form-label">Contact email</span>
+            <input name="contact_email" type="email" class="form-input" value="{{ subscriber.ContactEmail if subscriber else form.get('contact_email','') }}">
+        </label>
+        <label class="form-field">
+            <span class="form-label">Contact phone</span>
+            <input name="contact_phone" class="form-input" value="{{ subscriber.ContactPhone if subscriber else form.get('contact_phone','') }}">
+        </label>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">{{ "Save changes" if subscriber else "Create subscriber" }}</button>
+        </div>
+    </form>
+
+    {% if subscriber and subscriber.SubscriberStatus not in ("archived", "cancelled") %}
+    <div class="card" style="border-left:4px solid rgba(45,107,228,0.6);margin-top:var(--space-4)">
+        <h3>Trial Account</h3>
+        <p class="muted small">Provision or update a trial configuration for this subscriber — per-service credit limits, assigned station, and expiry date.</p>
+        <div style="margin-top:var(--space-2)">
+            <a href="/admin/subscribers/{{ subscriber.SubscriberID }}/trial" class="btn btn-primary">
+                Manage Trial
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if subscriber and subscriber.SubscriberStatus not in ("archived", "cancelled") %}
+    <div class="card" style="border-left:4px solid #dc3545;margin-top:var(--space-4)">
+        <h3>Deactivate subscriber</h3>
+        <p class="muted small">Deactivating a subscriber prevents them from logging in and stops pipeline monitoring. Their data is preserved. This cannot be undone from the UI.</p>
+        <form method="post" action="/admin/subscribers/{{ subscriber.SubscriberID }}/deactivate"
+              onsubmit="return confirm('Deactivate {{ subscriber.Name }}? They will lose access immediately.')">
+            <div style="display:flex;gap:var(--space-2);align-items:center;margin-top:var(--space-2)">
+                <select name="new_status" class="form-input" style="width:160px">
+                    <option value="archived">Archive</option>
+                    <option value="cancelled">Cancel</option>
+                </select>
+                <button type="submit" class="btn btn-danger">Deactivate</button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+<script>
+(function(){
+    var sel = document.getElementById('type-sel');
+    if (!sel) return;
+    function toggle() {
+        var v = sel.value;
+        var sf = document.getElementById('station-field');
+        var of = document.getElementById('other-field');
+        if (sf) sf.style.display = v === 'Radio Station' ? '' : 'none';
+        if (of) of.style.display = v === 'Other' ? '' : 'none';
+    }
+    sel.addEventListener('change', toggle); toggle();
+})();
+</script>
+{% endblock %}

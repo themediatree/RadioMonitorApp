@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}RadioMonitor — Radio Airplay Monitoring{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="container">
+        <h1>Know what's actually on the radio.</h1>
+        <p class="lead">
+            Real-time monitoring, transcription, and verification of broadcast
+            airplay across the stations that matter to you.
+        </p>
+        {% if user %}
+            <a href="/dashboard" class="btn btn-cta">Open dashboard</a>
+        {% else %}
+            <a href="/login" class="btn btn-cta">Sign in to your dashboard</a>
+        {% endif %}
+    </div>
+</section>
+
+<section class="pitch">
+    <div class="container grid-3">
+        <div class="card">
+            <h3>Continuous</h3>
+            <p>24/7 recording and processing across your subscribed stations.</p>
+        </div>
+        <div class="card">
+            <h3>Searchable</h3>
+            <p>Every commercial, song, and word is indexed and verifiable.</p>
+        </div>
+        <div class="card">
+            <h3>Accountable</h3>
+            <p>Clip-level evidence with timestamps you can share with clients.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

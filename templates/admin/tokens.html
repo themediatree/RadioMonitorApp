@@ -1,0 +1,52 @@
+{% extends "base_app.html" %}
+{% block title %}Credit Accounts — RadioMonitor{% endblock %}
+{% block topbar_title %}Credit Accounts{% endblock %}
+{% block content %}
+    <header class="page-header">
+        <h1>Credit accounts</h1>
+        <p class="muted">Manually add credits for Standard subscribers or overages.</p>
+    </header>
+
+    {% if request.query_params.get('error') %}
+    <div class="alert alert-error">Invalid amount. Please enter a positive number.</div>
+    {% endif %}
+
+    <div class="table-scroll"><table class="data-table" style="margin-bottom:var(--space-4)">
+        <thead><tr><th>Subscriber</th><th>Type</th><th>Plan</th><th>Balance</th><th>Consumed</th><th>Credit</th></tr></thead>
+        <tbody>
+        {% for acct in accounts %}
+        <tr>
+            <td><strong>{{ acct.subscriber.Name }}</strong></td>
+            <td class="muted">{{ acct.subscriber.SubscriberType }}</td>
+            <td class="muted">{{ acct.subscriber.SubscriptionPlan }}</td>
+            <td>
+                <span style="font-weight:600;color:{{ '#00c853' if acct.TokenBalance > 10 else '#ff1744' }}">
+                    {{ "%g"|format(acct.TokenBalance|float) }}
+                </span>
+            </td>
+            <td class="muted">{{ "%g"|format(acct.TotalConsumed|float) }}</td>
+            <td>
+                <form method="post" action="/admin/tokens/{{ acct.SubscriberID }}/credit"
+                      style="display:flex;gap:var(--space-2);align-items:center">
+                    <input name="amount" type="number" step="0.01" min="0.01"
+                           class="form-input" style="width:100px" placeholder="credits" required>
+                    <select name="tx_type" class="form-input" style="width:110px">
+                        <option value="purchase">Purchase</option>
+                        <option value="credit">Credit</option>
+                        <option value="adjustment">Adjust</option>
+                    </select>
+                    <input name="description" class="form-input" style="flex:1" placeholder="Note (optional)">
+                    <button type="submit" class="btn btn-primary btn-sm">Credit</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+
+    {% if subscribers | length > accounts | length %}
+    <div class="card placeholder">
+        <p class="muted small">{{ (subscribers | length) - (accounts | length) }} subscriber(s) have no credit account yet — accounts are created automatically on first registration or trial signup.</p>
+    </div>
+    {% endif %}
+{% endblock %}

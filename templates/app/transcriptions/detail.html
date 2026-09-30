@@ -1,0 +1,119 @@
+{% extends "base_app.html" %}
+{% block title %}Transcription — NOCTIV{% endblock %}
+{% block topbar_title %}Transcription{% endblock %}
+{% block content %}
+<div class="page-eyebrow">Transcriptions</div>
+<header class="page-header">
+  <h1>Transcription request #{{ treq.RequestID }}</h1>
+  <a href="/transcriptions" class="nav-link">← Back to transcriptions</a>
+</header>
+
+<div class="card" style="margin-bottom:1.25rem">
+  <dl class="detail-grid">
+    <dt>Station</dt><dd>{{ station.StationName if station else treq.StationID }}</dd>
+    <dt>Date range</dt><dd>{{ treq.DateFrom }} → {{ treq.DateTo }}</dd>
+    <dt>Time range</dt><dd>
+      {% if treq.ScheduleJson %}
+        Scheduled windows
+        {% if treq.TimeFrom and treq.TimeTo %}
+        <span class="muted small">({{ treq.TimeFrom }} – {{ treq.TimeTo }})</span>
+        {% endif %}
+      {% elif treq.TimeFrom and treq.TimeTo %}
+        {{ treq.TimeFrom }} – {{ treq.TimeTo }}
+      {% else %}
+        Full day
+      {% endif %}
+    </dd>
+    <dt>Format</dt><dd>{{ treq.OutputFormat }}</dd>
+    <dt>Status</dt><dd>
+      {% if treq.Status == 'ready' %}<span class="badge badge-active">Ready</span>
+      {% elif treq.Status == 'partial' %}<span class="badge badge-pending">Partial</span>
+      {% else %}<span class="badge badge-withdrawn">Pending</span>{% endif %}
+    </dd>
+    <dt>Chunks</dt><dd>{{ treq.ChunkCount or "—" }}</dd>
+    <dt>Credits debited</dt><dd>{{ "%g"|format(treq.TokensDebited|float) }}</dd>
+  </dl>
+</div>
+
+{% if treq.Status == 'pending' %}
+<div class="alert alert-info">This request is pending — transcripts for the requested period are not yet available. Check back later.</div>
+
+{% elif is_concatenated %}
+  {% if merged_json_path %}
+  <div class="card">
+    <h3 style="margin-bottom:0.75rem">Merged transcript</h3>
+    <p class="muted small" style="margin-bottom:0.75rem">Audio playback is not available for concatenated transcripts.</p>
+    <div id="karaoke-transcript" class="card" style="background:rgba(0,0,0,0.2);line-height:2;font-size:0.95rem;max-height:420px;overflow-y:auto">
+      <span class="muted">Loading transcript…</span>
+    </div>
+  </div>
+  <script>
+  fetch('/transcriptions/{{ treq.RequestID }}/merged-json')
+    .then(function(r){
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data){
+      var words=(data.results&&data.results.channels&&data.results.channels[0]&&data.results.channels[0].alternatives&&data.results.channels[0].alternatives[0]&&data.results.channels[0].alternatives[0].words)||[];
+      var container=document.getElementById('karaoke-transcript');
+      if(!words.length){container.innerHTML='<span class="muted">No transcript text available.</span>';return;}
+      container.innerHTML=words.map(function(w){
+        if(w.is_gap) return '<span style="color:var(--muted);font-style:italic">'+w.word+'</span>';
+        return '<span>'+w.word+'</span>';
+      }).join(' ');
+    }).catch(function(e){
+      document.getElementById('karaoke-transcript').innerHTML='<span class="muted">Transcript could not be loaded: '+e.message+'</span>';
+    });
+  </script>
+  {% else %}
+  <div class="alert alert-info">Merged transcript file is being prepared. Check back shortly.</div>
+  {% endif %}
+
+{% else %}
+  {% if chunks_data %}
+  {% for item in chunks_data %}
+  <div class="card" style="margin-bottom:1rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+      <strong style="font-family:var(--mono);font-size:0.85rem">{{ item.chunk.ChunkDate }} {{ item.chunk.StartTime }}</strong>
+      {% if item.has_audio and item.has_json %}<span class="badge badge-active">Ready</span>
+      {% elif item.has_audio %}<span class="badge badge-pending">Audio only</span>
+      {% else %}<span class="badge badge-withdrawn">Pending</span>{% endif %}
+    </div>
+    {% if item.has_audio %}
+    <audio controls preload="metadata" id="audio-{{ item.transcript.TranscriptID }}"
+           src="/transcriptions/chunks/{{ item.transcript.TranscriptID }}/audio" style="width:100%"></audio>
+    {% endif %}
+    {% if item.has_audio and item.has_json %}
+    <div id="karaoke-{{ item.transcript.TranscriptID }}" class="card" style="background:rgba(0,0,0,0.2);line-height:2;font-size:0.88rem;max-height:180px;overflow-y:auto;margin-top:0.75rem">
+      <span class="muted">Loading…</span>
+    </div>
+    <script>
+    (function(){
+      var tid={{ item.transcript.TranscriptID }};
+      var audio=document.getElementById('audio-'+tid);
+      var container=document.getElementById('karaoke-'+tid);
+      fetch('/transcriptions/chunks/'+tid+'/transcript-json').then(function(r){return r.json();}).then(function(data){
+        var words=(data.results&&data.results.channels&&data.results.channels[0]&&data.results.channels[0].alternatives&&data.results.channels[0].alternatives[0]&&data.results.channels[0].alternatives[0].words)||[];
+        if(!words.length){container.innerHTML='<span class="muted">No transcript.</span>';return;}
+        container.innerHTML=words.map(function(w,i){return '<span class="karaoke-word" data-start="'+w.start+'" data-end="'+w.end+'">'+w.word+'</span>';}).join(' ');
+        audio.addEventListener('timeupdate',function(){
+          var t=audio.currentTime;
+          container.querySelectorAll('.karaoke-word').forEach(function(s){
+            s.classList.toggle('karaoke-active',t>=parseFloat(s.dataset.start)&&t<=parseFloat(s.dataset.end));
+          });
+        });
+      }).catch(function(){container.innerHTML='<span class="muted">Transcript could not be loaded.</span>';});
+    })();
+    </script>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% else %}
+  <div class="alert alert-info">No transcript chunks found for this request period.</div>
+  {% endif %}
+{% endif %}
+<style>
+.karaoke-word{color:var(--muted);transition:color .15s,background .15s;padding:1px 2px;border-radius:3px}
+.karaoke-word.karaoke-active{color:var(--white);background:rgba(45,107,228,.35);font-weight:600}
+</style>
+{% endblock %}

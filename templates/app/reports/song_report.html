@@ -1,0 +1,433 @@
+{% extends "base_app.html" %}
+{% block title %}Song Monitoring Report — NOCTIV{% endblock %}
+{% block topbar_title %}Song Monitoring Report{% endblock %}
+
+{% block content %}
+<style>
+.report-eyebrow {
+  font-family: var(--mono); font-size: 0.62rem;
+  color: var(--glow); letter-spacing: 0.18em;
+  text-transform: uppercase; margin-bottom: 0.4rem;
+}
+.report-hero {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 1.5rem;
+  margin-bottom: 2rem; flex-wrap: wrap;
+}
+.report-hero h1 {
+  font-family: var(--display); font-size: 1.75rem;
+  font-weight: 800; color: var(--white);
+  letter-spacing: -0.02em; line-height: 1.1;
+}
+.report-hero-meta { font-size: 0.78rem; color: var(--muted); margin-top: 0.4rem; }
+.report-hero-actions { display: flex; gap: 0.5rem; flex-shrink: 0; align-items: flex-start; }
+
+.filter-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 1.25rem; margin-bottom: 1.75rem;
+}
+.filter-card-title {
+  font-family: var(--mono); font-size: 0.65rem;
+  color: var(--muted); letter-spacing: 0.12em;
+  text-transform: uppercase; margin-bottom: 1rem;
+}
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem; align-items: end;
+}
+
+.stat-strip {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1rem; margin-bottom: 1.75rem;
+}
+.stat-strip-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 1rem 1.25rem;
+  position: relative; overflow: hidden;
+}
+.stat-strip-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--cobalt), var(--glow));
+}
+.stat-strip-card.accent-green::before  { background: linear-gradient(90deg, #00c853, #00e676); }
+.stat-strip-card.accent-orange::before { background: linear-gradient(90deg, #ff6d00, #ff9100); }
+.stat-strip-card.accent-purple::before { background: linear-gradient(90deg, #7c4dff, #b388ff); }
+.stat-strip-label {
+  font-family: var(--mono); font-size: 0.62rem;
+  color: var(--muted); letter-spacing: 0.1em;
+  text-transform: uppercase; margin-bottom: 0.5rem;
+}
+.stat-strip-value {
+  font-family: var(--mono); font-size: 2rem;
+  font-weight: 500; color: var(--white); line-height: 1;
+}
+.stat-strip-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; }
+
+.results-panel {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+}
+.results-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);
+}
+.results-header-title {
+  font-family: var(--display); font-size: 0.9rem;
+  font-weight: 600; color: var(--white);
+}
+.results-count { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); }
+
+.plays-pill {
+  display: inline-block;
+  background: rgba(124,77,255,0.15);
+  border: 1px solid rgba(124,77,255,0.25);
+  color: #b388ff;
+  font-family: var(--mono); font-size: 0.72rem;
+  border-radius: 20px; padding: 2px 10px;
+  font-weight: 500;
+}
+
+.breakdown-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem; margin-top: 1.75rem;
+}
+.breakdown-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+}
+.breakdown-header {
+  padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--border);
+  font-family: var(--mono); font-size: 0.65rem;
+  color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase;
+}
+.breakdown-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.55rem 1.25rem;
+  border-bottom: 1px solid rgba(192,207,224,0.04);
+}
+.breakdown-row:last-child { border-bottom: none; }
+.breakdown-name {
+  font-size: 0.82rem; color: var(--pale); flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.breakdown-bar-wrap { display: flex; align-items: center; gap: 0.6rem; width: 120px; flex-shrink: 0; }
+.breakdown-bar { height: 6px; border-radius: 3px; background: rgba(74,142,255,0.15); flex: 1; overflow: hidden; }
+.breakdown-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--cobalt), var(--glow)); }
+.breakdown-count { font-family: var(--mono); font-size: 0.72rem; color: var(--chrome); width: 28px; text-align: right; flex-shrink: 0; }
+
+.empty-state { text-align: center; padding: 4rem 2rem; color: var(--muted); }
+.empty-state-icon { font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.4; }
+.empty-state-title { font-family: var(--display); font-size: 1rem; color: var(--chrome); margin-bottom: 0.4rem; }
+</style>
+
+<div class="report-eyebrow">Reports / Song Monitoring</div>
+<div class="report-hero">
+  <div>
+    <h1>Song Monitoring Report</h1>
+    <div class="report-hero-meta">
+      Song airplay detections scoped to your subscriptions
+      {% if result %}· Generated {{ result.generated_at.strftime("%d %b %Y %H:%M") }} UTC{% endif %}
+    </div>
+  </div>
+  <div class="report-hero-actions">
+    {% if result and result.rows %}
+    <a href="/reports/songs/pdf?{{ request.query_string.decode() }}"
+       class="btn btn-primary" target="_blank">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Export PDF
+    </a>
+    {% endif %}
+    <a href="/reports" class="btn btn-ghost">← All Reports</a>
+  </div>
+</div>
+
+<!-- FILTER CARD -->
+<div class="filter-card">
+  <div class="filter-card-title">Filter</div>
+  <form method="get" action="/reports/songs">
+    <div class="filter-grid">
+      <div class="form-field">
+        <label class="form-label">From</label>
+        <input type="date" name="date_from" class="form-input" value="{{ filters.date_from or '' }}">
+      </div>
+      <div class="form-field">
+        <label class="form-label">To</label>
+        <input type="date" name="date_to" class="form-input" value="{{ filters.date_to or '' }}">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Station</label>
+        <select name="station_id" class="form-select">
+          <option value="">All stations</option>
+          {% for st in stations %}
+          <option value="{{ st.StationID }}" {% if filters.station_id == st.StationID|string %}selected{% endif %}>
+            {{ st.StationName }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-field" style="position:relative">
+        <label class="form-label">Artist</label>
+        <input type="text" id="artist-search" class="form-input"
+               placeholder="Search…" autocomplete="off"
+               value="{{ filters.artist or '' }}"
+               oninput="filterArtists(this.value)">
+        <input type="hidden" name="artist" id="artist-val" value="{{ filters.artist or '' }}">
+        <div id="artist-dropdown" class="station-picker-dropdown" style="max-height:200px">
+          <div id="artist-options">
+            {% for a in artists %}
+            <div class="station-picker-option" data-value="{{ a }}"
+                 onclick="selectArtist('{{ a|replace("'", "\\'") }}')">{{ a }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="form-field" style="position:relative">
+        <label class="form-label">Title</label>
+        <input type="text" id="title-search" class="form-input"
+               placeholder="Search…" autocomplete="off"
+               value="{{ filters.title or '' }}"
+               oninput="filterTitles(this.value)">
+        <input type="hidden" name="title" id="title-val" value="{{ filters.title or '' }}">
+        <div id="title-dropdown" class="station-picker-dropdown" style="max-height:200px">
+          <div id="title-options">
+            {% for t in titles %}
+            <div class="station-picker-option" data-value="{{ t }}"
+                 onclick="selectTitle('{{ t|replace("'", "\\'") }}')">{{ t }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="form-field" style="align-self:end">
+        <button type="submit" class="btn btn-primary" style="width:100%">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          Run Report
+        </button>
+      </div>
+      <div class="form-field" style="align-self:end">
+        <a href="/reports/songs?all=1" class="btn btn-ghost" style="width:100%;text-align:center">
+          All Songs
+        </a>
+      </div>
+    </div>
+  </form>
+</div>
+
+{% if result %}
+
+<!-- SUMMARY STRIP -->
+<div class="stat-strip">
+  <div class="stat-strip-card">
+    <div class="stat-strip-label">Total Plays</div>
+    <div class="stat-strip-value">{{ result.total_plays }}</div>
+    <div class="stat-strip-sub">airplays in period</div>
+  </div>
+  <div class="stat-strip-card accent-green">
+    <div class="stat-strip-label">Unique Songs</div>
+    <div class="stat-strip-value">{{ result.unique_songs }}</div>
+    <div class="stat-strip-sub">artist · title combinations</div>
+  </div>
+  <div class="stat-strip-card accent-orange">
+    <div class="stat-strip-label">Stations</div>
+    <div class="stat-strip-value">{{ result.unique_stations }}</div>
+    <div class="stat-strip-sub">stations with airplay</div>
+  </div>
+  {% if result.has_schedule %}
+  <div class="stat-strip-card" style="border-color:rgba(251,146,60,0.3)">
+    <div class="stat-strip-label" style="color:#fb923c">Out of Schedule</div>
+    <div class="stat-strip-value" style="color:#fb923c">{{ result.out_of_schedule_count }}</div>
+    <div class="stat-strip-sub">of {{ result.total_plays }} total airplays</div>
+  </div>
+  {% endif %}
+  <div class="stat-strip-card accent-purple">
+    <div class="stat-strip-label">Period</div>
+    <div class="stat-strip-value" style="font-size:1.1rem;padding-top:0.35rem">
+      {{ result.date_from.strftime("%d %b") if result.date_from else "All" }}
+      {% if result.date_to %}– {{ result.date_to.strftime("%d %b %Y") }}{% endif %}
+    </div>
+    <div class="stat-strip-sub">date range</div>
+  </div>
+</div>
+
+{% if result.rows %}
+
+<!-- SONG TABLE -->
+<div class="results-panel">
+  <div class="results-header">
+    <div class="results-header-title">Song Airplay Log</div>
+    <div class="results-count">{{ result.total }} result{{ 's' if result.total != 1 else '' }}</div>
+  </div>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Artist</th>
+          <th>Title</th>
+          <th>Start</th>
+          <th>End</th>
+          <th>Plays</th>
+          <th>Clip</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% set col_count = 7 %}
+        {% for station_name, station_rows in result.rows_by_station.items() %}
+        <tr>
+          <td colspan="7" style="background:#2a2f3a;padding:8px 12px;border-top:2px solid rgba(74,142,255,0.2)">
+            <div style="display:flex;align-items:center;gap:10px">
+              {% set logo_url = result.station_logo_map.get(station_name) %}
+              {% if logo_url %}
+              <img src="{{ logo_url }}"
+                   onerror="this.style.display='none'"
+                   style="height:28px;width:auto;border-radius:4px;object-fit:contain"
+                   alt="{{ station_name }}">
+              {% endif %}
+              <span style="font-weight:700;font-size:0.85rem;color:#c8cdd8;letter-spacing:0.03em">{{ station_name }}</span>
+              <span style="font-size:0.72rem;color:var(--muted);margin-left:4px">
+                {% set det_count = namespace(n=0) %}{% for _r in station_rows %}{% if _r.detection_id is defined and _r.detection_id != 0 %}{% set det_count.n = det_count.n + 1 %}{% elif _r.plays is defined and _r.plays > 0 %}{% set det_count.n = det_count.n + 1 %}{% elif _r.word_detection_id is defined and _r.word_detection_id != 0 %}{% set det_count.n = det_count.n + 1 %}{% endif %}{% endfor %}
+                {% if det_count.n > 0 %}{{ det_count.n }} detection{{ 's' if det_count != 1 }}{% else %}No detections in period{% endif %}
+              </span>
+            </div>
+          </td>
+        </tr>
+        {% for row in station_rows %}
+        <tr {% if row.song_detection_id == 0 %}style="opacity:0.5;font-style:italic;"{% elif not row.in_schedule %}style="background:rgba(251,146,60,0.05)"{% endif %}>
+          <td class="nowrap" style="font-family:var(--mono);font-size:0.75rem;color:var(--muted)">{% if row.song_detection_id == 0 %}No detections{% else %}{{ row.chunk_date }}{% endif %}</td>
+          <td style="font-weight:500;color:var(--white)">{% if row.song_detection_id == 0 %}—{% else %}{{ row.artist }}{% endif %}</td>
+          <td style="color:var(--pale)">{% if row.song_detection_id == 0 %}—{% else %}{{ row.title }}{% endif %}
+            {% if not row.in_schedule %}<span style="margin-left:6px;font-size:0.62rem;font-weight:600;padding:1px 5px;border-radius:3px;background:rgba(251,146,60,0.15);color:#fb923c;border:1px solid rgba(251,146,60,0.3)">Out of schedule</span>{% endif %}
+          </td>
+          <td class="nowrap" style="font-family:var(--mono);font-size:0.78rem">{{ row.start_clock }}</td>
+          <td class="nowrap" style="font-family:var(--mono);font-size:0.78rem;color:var(--muted)">{{ row.end_clock }}</td>
+          <td><span class="plays-pill">{% if row.song_detection_id == 0 %}0{% else %}{{ row.plays }}{% endif %}</span></td>
+          <td>
+            {% if row.clip_url %}
+            <a href="{{ row.clip_url[0] }}" target="_blank"
+               style="display:inline-flex;align-items:center;justify-content:center;
+                      width:28px;height:28px;border-radius:50%;
+                      background:rgba(124,77,255,0.15);border:1px solid rgba(124,77,255,0.3);
+                      color:#b388ff;text-decoration:none" title="Play clip">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
+                <polygon points="5,3 19,12 5,21"/>
+              </svg>
+            </a>
+            {% else %}
+            <span class="muted" style="font-size:0.72rem">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- BREAKDOWN CHARTS -->
+<div class="breakdown-grid">
+  <div class="breakdown-card">
+    <div class="breakdown-header">Plays by Station</div>
+    {% set max_s = result.by_station.values() | list | max %}
+    {% for name, count in result.by_station.items() %}
+    <div class="breakdown-row">
+      <div class="breakdown-name">{{ name }}</div>
+      <div class="breakdown-bar-wrap">
+        <div class="breakdown-bar"><div class="breakdown-bar-fill" style="width:{{ (count / max_s * 100)|int }}%"></div></div>
+        <div class="breakdown-count">{{ count }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="breakdown-card">
+    <div class="breakdown-header">Plays by Artist</div>
+    {% set max_a = result.by_artist.values() | list | max %}
+    {% for name, count in result.by_artist.items() %}
+    <div class="breakdown-row">
+      <div class="breakdown-name">{{ name }}</div>
+      <div class="breakdown-bar-wrap">
+        <div class="breakdown-bar"><div class="breakdown-bar-fill" style="width:{{ (count / max_a * 100)|int }}%"></div></div>
+        <div class="breakdown-count">{{ count }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="breakdown-card">
+    <div class="breakdown-header">Plays by Title</div>
+    {% set max_t = result.by_title.values() | list | max %}
+    {% for name, count in result.by_title.items() %}
+    <div class="breakdown-row">
+      <div class="breakdown-name">{{ name }}</div>
+      <div class="breakdown-bar-wrap">
+        <div class="breakdown-bar"><div class="breakdown-bar-fill" style="width:{{ (count / max_t * 100)|int }}%"></div></div>
+        <div class="breakdown-count">{{ count }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% else %}
+<div class="results-panel">
+  <div class="empty-state">
+    <div class="empty-state-icon">📭</div>
+    <div class="empty-state-title">No song detections found</div>
+    <p class="muted small" style="margin-top:0.4rem">No airplay detected for the selected filters.<br>Try adjusting the date range or station.</p>
+  </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="results-panel">
+  <div class="empty-state">
+    <div class="empty-state-icon" style="opacity:0.5">🎵</div>
+    <div class="empty-state-title">Set your filters and run the report</div>
+    <p class="muted small" style="margin-top:0.4rem">Select a filter above, then click <strong style="color:var(--chrome)">Run Report</strong>.</p>
+  </div>
+</div>
+{% endif %}
+
+{% block scripts %}
+<script>
+var artistDropdown = document.getElementById('artist-dropdown');
+var artistSearch   = document.getElementById('artist-search');
+var artistVal      = document.getElementById('artist-val');
+
+artistSearch.addEventListener('focus', function() { artistDropdown.classList.add('open'); filterArtists(this.value); });
+document.addEventListener('click', function(e) {
+  if (!artistSearch.contains(e.target) && !artistDropdown.contains(e.target))
+    artistDropdown.classList.remove('open');
+  if (!titleSearch.contains(e.target) && !titleDropdown.contains(e.target))
+    titleDropdown.classList.remove('open');
+});
+function filterArtists(q) {
+  artistDropdown.classList.add('open');
+  document.querySelectorAll('#artist-options .station-picker-option').forEach(function(o) {
+    o.style.display = o.dataset.value.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+function selectArtist(val) { artistSearch.value = val; artistVal.value = val; artistDropdown.classList.remove('open'); }
+artistSearch.addEventListener('input', function() { if (!this.value) artistVal.value = ''; });
+
+var titleDropdown = document.getElementById('title-dropdown');
+var titleSearch   = document.getElementById('title-search');
+var titleVal      = document.getElementById('title-val');
+
+titleSearch.addEventListener('focus', function() { titleDropdown.classList.add('open'); filterTitles(this.value); });
+function filterTitles(q) {
+  titleDropdown.classList.add('open');
+  document.querySelectorAll('#title-options .station-picker-option').forEach(function(o) {
+    o.style.display = o.dataset.value.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+function selectTitle(val) { titleSearch.value = val; titleVal.value = val; titleDropdown.classList.remove('open'); }
+titleSearch.addEventListener('input', function() { if (!this.value) titleVal.value = ''; });
+</script>
+{% endblock %}
+
+{% endblock %}

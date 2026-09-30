@@ -1,0 +1,59 @@
+{% extends "base_app.html" %}
+{% block title %}Word Detection — RadioMonitor
+{% endblock %}
+{% block topbar_title %}Word Detection{% endblock %}
+{% block content %}
+    <div class="page-eyebrow">Words & Phrases</div>
+    <header class="page-header">
+        <h1>Word & phrase detection</h1>
+        <div style="display:flex;gap:var(--space-2)">
+            <a href="/words/subscribe" class="btn btn-primary">Subscribe to keyword</a>
+            <a href="/words/detections" class="btn btn-ghost">All detections</a>
+        </div>
+    </header>
+
+    {% if retro_job %}
+    <div class="alert alert-success">Subscription created. A retrospective search (job #{{ retro_job }}) has been automatically submitted to cover past airings — results will appear in your detections shortly.</div>
+    {% endif %}
+
+    <section>
+        <h2>Active keyword subscriptions</h2>
+        {% if subscriptions %}
+        <div class="table-scroll"><table class="data-table">
+            <thead><tr><th>Keyword / phrase</th><th>Stations</th><th>From</th><th>To</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+            {% for s in subscriptions %}
+            {% set expired = s.EndDate and s.EndDate < today %}
+            <tr>
+                <td><strong>{{ s.TargetValue }}</strong></td>
+                <td class="muted">{{ resolve_stations(s.StationFilter) }}</td>
+                <td class="muted">{{ s.StartDate }}</td>
+                <td class="muted">{{ s.EndDate or "Open" }}</td>
+                <td>
+                    {% if expired %}
+                        <span class="badge badge-completed">completed</span>
+                    {% elif s.Status == "withdrawn" %}
+                        <span class="badge badge-withdrawn">withdrawn</span>
+                    {% else %}
+                        <span class="badge badge-active">active</span>
+                    {% endif %}
+                </td>
+                <td><span class="badge badge-{{ 'pending' if s.Source == 'api' else 'active' }}">{{ s.Source or 'app' }}</span></td>
+                <td>
+                    {% if s.Status == "active" and not expired %}
+                    <form method="post" action="/words/subscribe/{{ s.SubscriptionID }}/withdraw"
+                          onsubmit="return confirm('Withdraw this keyword subscription?')">
+                        <button type="submit" class="btn btn-ghost btn-sm">Withdraw</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table></div>
+        {% else %}
+        <div class="card placeholder"><p class="muted">No subscriptions yet. <a href="/words/subscribe">Subscribe to keyword</a> to start monitoring.</p></div>
+        {% endif %}
+    </section>
+
+{% endblock %}

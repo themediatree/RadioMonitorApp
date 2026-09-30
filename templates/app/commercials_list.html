@@ -1,0 +1,86 @@
+{% extends "base_app.html" %}
+{% block title %}My Commercials — RadioMonitor{% endblock %}
+{% block topbar_title %}My Commercials{% endblock %}
+{% block content %}
+    <div class="page-eyebrow">Commercials</div>
+    <header class="page-header">
+        <h1>Registered commercials</h1>
+        <a href="/register-commercial" class="btn btn-primary">Register commercial</a>
+    </header>
+
+    {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+    <div class="filter-bar">
+        <label class="form-field" style="flex:0 0 160px">
+            <span class="form-label">Status</span>
+            <select id="status-sel" class="form-input" onchange="applyFilters()">
+                <option value="">All</option>
+                <option value="pending"   {{ 'selected' if status_filter=='pending' }}>Pending</option>
+                <option value="active"    {{ 'selected' if status_filter=='active' }}>Active</option>
+                <option value="completed" {{ 'selected' if status_filter=='completed' }}>Completed</option>
+                <option value="withdrawn" {{ 'selected' if status_filter=='withdrawn' }}>Withdrawn</option>
+            </select>
+        </label>
+        <label class="form-field" style="flex:1">
+            <span class="form-label">Search</span>
+            <input type="text" id="com-search" class="form-input" placeholder="Campaign, Tape ID, Brand, Type, Status, Station…" oninput="applyFilters()">
+        </label>
+    </div>
+
+    <p class="muted small" id="com-count">{{ total }} commercial{{ "" if total == 1 else "s" }}.</p>
+
+    {% if rows %}
+    <div class="table-scroll"><table class="data-table" id="com-table">
+        <thead>
+            <tr>
+                <th>Tape ID</th>
+                <th>Campaign</th>
+                <th>Brand</th>
+                <th>Type</th>
+                <th>Stations</th>
+                <th>Status</th>
+                <th>Source</th>
+                <th>Registered</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for item in rows %}
+        {% set c = item.commercial %}
+            <tr data-status="{{ c.Status }}">
+                <td><strong>{{ c.DisplayTapeID or c.CommercialName }}</strong></td>
+                <td class="muted">{{ item.campaigns | map(attribute='Name') | join(', ') or '—' }}</td>
+                <td class="muted">{{ c.Brand or "—" }}</td>
+                <td>{{ c.CommercialType }}</td>
+                <td class="muted">{{ item.stations | map(attribute='StationName') | join(', ') or '—' }}</td>
+                <td><span class="badge badge-{{ c.Status }}">{{ c.Status }}</span></td>
+                <td><span class="badge badge-{{ 'pending' if c.Source == 'api' else 'active' }}">{{ c.Source }}</span></td>
+                <td class="muted nowrap">{{ c.CreatedAt.strftime("%Y-%m-%d") if c.CreatedAt else "—" }}</td>
+                <td><a href="/commercials/{{ c.CommercialID }}" class="nav-link">Details</a></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+    {% else %}
+    <div class="card placeholder">
+        <p class="muted">No commercials registered yet.</p>
+        <a href="/register-commercial" class="btn btn-primary">Register your first commercial</a>
+    </div>
+    {% endif %}
+<script>
+function applyFilters() {
+    var q = document.getElementById('com-search').value.toLowerCase();
+    var s = document.getElementById('status-sel').value;
+    var rows = document.querySelectorAll('#com-table tbody tr');
+    var visible = 0;
+    rows.forEach(function(row) {
+        var matchText = !q || row.textContent.toLowerCase().includes(q);
+        var matchStatus = !s || row.dataset.status === s;
+        var show = matchText && matchStatus;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+    document.getElementById('com-count').textContent = visible + ' commercial' + (visible === 1 ? '' : 's') + '.';
+}
+</script>
+{% endblock %}

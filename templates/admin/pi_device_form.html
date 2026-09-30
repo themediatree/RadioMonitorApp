@@ -1,0 +1,96 @@
+{% extends "base_app.html" %}
+{% block title %}{{ 'Edit' if device else 'New' }} Pi Device — RadioMonitor{% endblock %}
+{% block topbar_title %}{{ 'Edit' if device else 'New' }} Pi Device{% endblock %}
+
+{% block content %}
+<header class="page-header">
+  <h1>{{ 'Edit' if device else 'Add' }} Pi Device</h1>
+  <a href="{{ '/admin/pi-devices/' ~ device.PiDeviceID if device else '/admin/pi-devices' }}" class="btn btn-ghost">← Back</a>
+</header>
+
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+
+<div class="card" style="max-width:540px">
+  <form method="post"
+        action="{{ '/admin/pi-devices/' ~ device.PiDeviceID if device else '/admin/pi-devices' }}">
+
+    <div class="form-section-label">Device Identity</div>
+
+    <div class="form-grid-2">
+      <div class="form-field">
+        <label class="form-label" for="device_name">Device Name *</label>
+        <input type="text" id="device_name" name="device_name" class="form-input" required
+               value="{{ device.DeviceName if device else (form.device_name or '') }}"
+               placeholder="e.g. Radio8">
+        <div class="form-hint">Short identifier — used in logs and dashboard</div>
+      </div>
+      <div class="form-field">
+        <label class="form-label" for="vpn_ip">WireGuard VPN IP *</label>
+        <input type="text" id="vpn_ip" name="vpn_ip" class="form-input" required
+               value="{{ device.VpnIP if device else (form.vpn_ip or '') }}"
+               placeholder="10.100.100.x"
+               pattern="^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$">
+        <div class="form-hint">Must be unique — assigned in WireGuard config</div>
+      </div>
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="station_id">Station</label>
+      <select id="station_id" name="station_id" class="form-input form-select">
+        <option value="">— Not assigned —</option>
+        {% for s in stations %}
+        <option value="{{ s.StationID }}"
+          {{ 'selected' if (device and device.StationID == s.StationID) or (form.station_id|string == s.StationID|string) }}>
+          {{ s.StationName }}
+        </option>
+        {% endfor %}
+      </select>
+      <div class="form-hint">The station this Pi monitors (can be assigned later)</div>
+    </div>
+
+    <div class="form-section-label" style="margin-top:1.5rem">RF & Stream</div>
+
+    <div class="form-grid-2">
+      <div class="form-field">
+        <label class="form-label" for="frequency">Frequency (MHz)</label>
+        <input type="number" id="frequency" name="frequency" class="form-input"
+               step="0.001" min="87.5" max="108"
+               value="{{ '%.3f'|format(device.Frequency) if device and device.Frequency else (form.frequency or '') }}"
+               placeholder="94.700">
+      </div>
+      <div class="form-field">
+        <label class="form-label" for="power_source">Power Source</label>
+        <select id="power_source" name="power_source" class="form-input form-select">
+          <option value="">— Unknown —</option>
+          {% for ps in ['mains', 'UPS', 'battery', 'solar'] %}
+          <option value="{{ ps }}"
+            {{ 'selected' if (device and device.PowerSource == ps) or (form.power_source == ps) }}>
+            {{ ps|capitalize }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="stream_url">Stream URL</label>
+      <input type="url" id="stream_url" name="stream_url" class="form-input"
+             value="{{ device.StreamUrl if device else (form.stream_url or '') }}"
+             placeholder="http://10.100.100.x:8000/stream">
+      <div class="form-hint">URL of the audio stream this Pi produces (set by Pi agent)</div>
+    </div>
+
+    <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
+      <button type="submit" class="btn btn-primary">
+        {{ 'Save Changes' if device else 'Add Device' }}
+      </button>
+      <a href="{{ '/admin/pi-devices/' ~ device.PiDeviceID if device else '/admin/pi-devices' }}"
+         class="btn btn-ghost">Cancel</a>
+    </div>
+
+  </form>
+</div>
+
+{% endblock %}

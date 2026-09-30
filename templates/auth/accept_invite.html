@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Accept invitation — RadioMonitor{% endblock %}
+
+{% block content %}
+<section class="auth-section">
+    <div class="auth-card">
+        <h1>Welcome to RadioMonitor</h1>
+
+        {% if not valid %}
+            <div class="alert alert-error" role="alert">{{ error }}</div>
+            <p class="auth-footer muted">
+                If you believe this is a mistake, ask whoever invited you to send a new link.
+            </p>
+            <a href="/" class="btn btn-ghost btn-block">Back to home</a>
+        {% else %}
+            <p class="muted">
+                Set a password to activate your account for
+                <strong>{{ email }}</strong>.
+            </p>
+
+            {% if error %}
+                <div class="alert alert-error" role="alert">{{ error }}</div>
+            {% endif %}
+
+            <form method="post" action="/accept-invite" class="form-stack" autocomplete="on">
+                <input type="hidden" name="token" value="{{ token }}">
+
+                <label class="form-field">
+                    <span class="form-label">Your name</span>
+                    <input type="text" name="full_name" class="form-input"
+                           value="{{ full_name or '' }}" autocomplete="name">
+                </label>
+
+                <label class="form-field">
+                    <span class="form-label">Password</span>
+                    <input type="password" name="password" required
+                           autocomplete="new-password" class="form-input">
+                    <span class="form-hint muted">
+                        At least 10 characters, with a letter and a number.
+                    </span>
+                </label>
+
+                <label class="form-field">
+                    <span class="form-label">Confirm password</span>
+                    <input type="password" name="password_confirm" required
+                           autocomplete="new-password" class="form-input">
+                </label>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    Activate account
+                </button>
+            </form>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

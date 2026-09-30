@@ -1,0 +1,112 @@
+{% extends "base_app.html" %}
+{% block title %}Pi Devices — RadioMonitor{% endblock %}
+{% block topbar_title %}Pi Devices{% endblock %}
+
+{% block content %}
+<header class="page-header">
+  <div>
+    <h1>Pi Devices</h1>
+    <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">RTL-SDR remote monitoring units via WireGuard VPN</div>
+  </div>
+  <a href="/admin/pi-devices/new" class="btn btn-primary">+ Add Device</a>
+</header>
+
+{% if devices %}
+<div class="pi-grid" id="pi-grid">
+  {% for d in devices %}
+  <a href="/admin/pi-devices/{{ d.PiDeviceID }}" class="pi-card" id="pi-card-{{ d.PiDeviceID }}">
+    <div class="pi-card-header">
+      <div class="pi-name">{{ d.DeviceName }}</div>
+      <div class="pi-status-dot" style="background:{{ d.status_colour }}" title="{{ d.status_label }}"></div>
+    </div>
+    <div class="pi-station">{{ d.station.StationName if d.station else '— no station —' }}</div>
+    <div class="pi-vpn">{{ d.VpnIP }}</div>
+    <div class="pi-indicators">
+      <span class="pi-ind {% if d.InternetConnected %}on{% elif d.InternetConnected == false %}off{% else %}unk{% endif %}" title="Internet">🌐</span>
+      <span class="pi-ind {% if d.FmSignal %}on{% elif d.FmSignal == false %}off{% else %}unk{% endif %}" title="FM Signal">📡</span>
+      <span class="pi-ind {% if d.StreamActive %}on{% elif d.StreamActive == false %}off{% else %}unk{% endif %}" title="Stream">🎙️</span>
+      <span class="pi-ind {% if d.PowerSource == 'mains' or d.PowerSource == 'UPS' %}on{% elif d.PowerSource %}off{% else %}unk{% endif %}" title="Power">⚡</span>
+    </div>
+    <div class="pi-meta">
+      <span class="pi-freq">{% if d.Frequency %}{{ "%.3f"|format(d.Frequency) }} MHz{% else %}—{% endif %}</span>
+      <span class="pi-seen" id="pi-seen-{{ d.PiDeviceID }}">{{ d.last_seen_ago }}</span>
+    </div>
+    {% if not d.IsActive %}
+    <div class="pi-disabled-banner">Disabled</div>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-state-icon">📡</div>
+  <div class="empty-state-title">No Pi devices yet</div>
+  <p class="empty-state-body">Add your first Raspberry Pi RTL-SDR unit to start remote FM monitoring.</p>
+  <a href="/admin/pi-devices/new" class="btn btn-primary">+ Add Device</a>
+</div>
+{% endif %}
+
+<style>
+.pi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+.pi-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(192,207,224,0.08);
+  border-radius: 12px; padding: 1.25rem;
+  text-decoration: none; color: inherit;
+  transition: border-color 0.2s, background 0.2s;
+  display: block; position: relative; overflow: hidden;
+}
+.pi-card:hover {
+  border-color: rgba(74,142,255,0.25);
+  background: rgba(74,142,255,0.04);
+}
+.pi-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.pi-name { font-weight: 700; font-size: 1rem; color: var(--white); }
+.pi-status-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  flex-shrink: 0; box-shadow: 0 0 6px currentColor;
+}
+.pi-station { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.25rem; }
+.pi-vpn { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); margin-bottom: 0.75rem; }
+.pi-indicators { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+.pi-ind { font-size: 1rem; opacity: 0.35; }
+.pi-ind.on  { opacity: 1; }
+.pi-ind.off { opacity: 0.2; filter: grayscale(1); }
+.pi-meta { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--muted); }
+.pi-freq { font-family: var(--mono); }
+.pi-disabled-banner {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.5); text-align: center;
+  font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); padding: 3px 0;
+}
+</style>
+
+{% block scripts %}
+<script>
+// Auto-refresh status every 30 seconds
+function refreshStatus() {
+  fetch('/api/admin/pi-devices/status')
+    .then(function(r) { return r.json(); })
+    .then(function(devices) {
+      devices.forEach(function(d) {
+        var card = document.getElementById('pi-card-' + d.id);
+        if (!card) return;
+        var dot  = card.querySelector('.pi-status-dot');
+        var seen = document.getElementById('pi-seen-' + d.id);
+        if (dot)  { dot.style.background = d.status_colour; dot.title = d.status_label; }
+        if (seen) { seen.textContent = d.last_seen_ago; }
+      });
+    })
+    .catch(function() {}); // silent fail
+}
+setInterval(refreshStatus, 30000);
+</script>
+{% endblock %}
+
+{% endblock %}

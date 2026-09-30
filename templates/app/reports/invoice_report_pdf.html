@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; }
+@page {
+  size: A4 landscape;
+  margin: 14mm 14mm 18mm 14mm;
+  @bottom-center {
+    content: "NOCTIV RadioMonitor · Invoice Report · Page " counter(page) " of " counter(pages);
+    font-family: 'JetBrains Mono', monospace; font-size: 7pt; color: #94a3b8;
+  }
+}
+body { font-family: 'DM Sans', sans-serif; font-size: 9pt; color: #1e293b; background: white; }
+
+/* HEADER */
+.pdf-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding-bottom: 10px; border-bottom: 2px solid #16a34a; margin-bottom: 10px;
+}
+.pdf-brand { font-family: 'DM Sans', sans-serif; font-weight: 800; font-size: 18pt; color: #0a1628; letter-spacing: -0.02em; line-height: 1; }
+.pdf-brand span { color: #16a34a; }
+.pdf-report-title { font-size: 9pt; color: #64748b; margin-top: 3px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+.pdf-meta { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 7.5pt; color: #64748b; line-height: 1.7; }
+.pdf-meta strong { color: #1e293b; }
+
+/* ACCOUNT BANNER */
+.account-banner {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;
+  padding: 10px 14px; margin-bottom: 10px;
+}
+.account-name { font-weight: 700; font-size: 11pt; color: #0a1628; }
+.account-sub  { font-family: 'JetBrains Mono', monospace; font-size: 7pt; color: #64748b; margin-top: 2px; }
+.balance-group { display: flex; gap: 24px; }
+.balance-item { text-align: right; }
+.balance-label { font-family: 'JetBrains Mono', monospace; font-size: 6.5pt; color: #94a3b8; letter-spacing: 0.08em; text-transform: uppercase; }
+.balance-value { font-family: 'JetBrains Mono', monospace; font-size: 12pt; font-weight: 500; color: #0a1628; }
+.balance-zar   { font-size: 7pt; color: #64748b; }
+
+/* STAT STRIP */
+.pdf-stat-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+.pdf-stat { background: #f8fafc; border: 1px solid #e2e8f0; border-top: 3px solid #16a34a; border-radius: 6px; padding: 8px 10px; }
+.pdf-stat:nth-child(2) { border-top-color: #ef4444; }
+.pdf-stat:nth-child(3) { border-top-color: #2d6be4; }
+.pdf-stat:nth-child(4) { border-top-color: #7c4dff; }
+.pdf-stat-label { font-family: 'JetBrains Mono', monospace; font-size: 6.5pt; color: #94a3b8; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 3px; }
+.pdf-stat-value { font-family: 'JetBrains Mono', monospace; font-size: 14pt; font-weight: 500; color: #0a1628; line-height: 1; }
+.pdf-stat-sub { font-size: 7pt; color: #94a3b8; margin-top: 2px; }
+
+/* TABLE */
+table { width: 100%; border-collapse: collapse; font-size: 8pt; margin-bottom: 12px; }
+thead tr { background: #0a1628; }
+thead th { font-family: 'JetBrains Mono', monospace; font-size: 6.5pt; color: #94a3b8; letter-spacing: 0.1em; text-transform: uppercase; padding: 6px 8px; text-align: left; font-weight: 500; }
+thead th.right { text-align: right; }
+tbody tr:nth-child(even) { background: #f8fafc; }
+tbody tr:nth-child(odd)  { background: #ffffff; }
+tbody td { padding: 5px 8px; color: #1e293b; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+tbody td.right { text-align: right; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.muted { color: #94a3b8; }
+.bold { font-weight: 600; }
+.debit  { color: #dc2626; font-family: 'JetBrains Mono', monospace; }
+.credit { color: #16a34a; font-family: 'JetBrains Mono', monospace; }
+.neutral { color: #475569; font-family: 'JetBrains Mono', monospace; }
+
+.type-badge {
+  display: inline-block; padding: 1px 6px; border-radius: 3px;
+  font-family: 'JetBrains Mono', monospace; font-size: 6pt; font-weight: 500;
+}
+.type-usage      { background: #fee2e2; color: #dc2626; }
+.type-topup      { background: #dcfce7; color: #16a34a; }
+.type-refund     { background: #dbeafe; color: #1d4ed8; }
+.type-adjustment { background: #f1f5f9; color: #475569; }
+
+.ref-badge {
+  display: inline-block; padding: 1px 6px; border-radius: 3px;
+  background: #ede9fe; color: #6d28d9;
+  font-family: 'JetBrains Mono', monospace; font-size: 6pt;
+}
+
+/* BREAKDOWN */
+.breakdown-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.breakdown-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; }
+.breakdown-title { font-family: 'JetBrains Mono', monospace; font-size: 6.5pt; color: #64748b; letter-spacing: 0.1em; text-transform: uppercase; padding: 6px 10px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; }
+.breakdown-row { display: flex; align-items: center; padding: 4px 10px; border-bottom: 1px solid #f1f5f9; gap: 8px; }
+.breakdown-row:last-child { border-bottom: none; }
+.b-name  { flex: 1; font-size: 7.5pt; color: #1e293b; }
+.b-bar   { width: 60px; height: 5px; background: #e2e8f0; border-radius: 2px; overflow: hidden; }
+.b-fill  { height: 100%; border-radius: 2px; background: linear-gradient(90deg, #16a34a, #4ade80); }
+.b-count { font-family: 'JetBrains Mono', monospace; font-size: 7pt; color: #475569; width: 55px; text-align: right; }
+
+.pdf-footer-note { margin-top: 10px; padding-top: 8px; border-top: 1px solid #e2e8f0; font-size: 7pt; color: #94a3b8; font-family: 'JetBrains Mono', monospace; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="pdf-header">
+  <div>
+    <div class="pdf-brand">NOC<span>TIV</span></div>
+    <div class="pdf-report-title">Invoice Report · Credit & Usage Statement</div>
+  </div>
+  <div class="pdf-meta">
+    <div><strong>Account</strong> {{ result.subscriber_name }}</div>
+    <div><strong>Period</strong>
+      {{ result.date_from.strftime("%d %b %Y") if result.date_from else "All time" }}
+      {% if result.date_to %} – {{ result.date_to.strftime("%d %b %Y") }}{% endif %}
+    </div>
+    <div><strong>Generated</strong> {{ result.generated_at.strftime("%d %b %Y %H:%M") }} UTC</div>
+    <div><strong>Rate</strong> R {{ "%.2f"|format(result.zar_per_token) }} per credit</div>
+  </div>
+</div>
+
+<!-- ACCOUNT BANNER -->
+<div class="account-banner">
+  <div>
+    <div class="account-name">{{ result.subscriber_name }}</div>
+    <div class="account-sub">NOCTIV RadioMonitor · Credit Statement</div>
+  </div>
+  <div class="balance-group">
+    <div class="balance-item">
+      <div class="balance-label">Opening Balance</div>
+      <div class="balance-value">{{ "%.2f"|format(result.opening_balance) }} cr</div>
+      <div class="balance-zar">R {{ "%.2f"|format(result.opening_balance * result.zar_per_token) }}</div>
+    </div>
+    <div class="balance-item">
+      <div class="balance-label">Closing Balance</div>
+      <div class="balance-value">{{ "%.2f"|format(result.closing_balance) }} cr</div>
+      <div class="balance-zar">R {{ "%.2f"|format(result.closing_balance * result.zar_per_token) }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- STAT STRIP -->
+<div class="pdf-stat-strip">
+  <div class="pdf-stat">
+    <div class="pdf-stat-label">Credits Top-up</div>
+    <div class="pdf-stat-value">{{ "%.2f"|format(result.total_credited) }}</div>
+    <div class="pdf-stat-sub">R {{ "%.2f"|format(result.total_credited * result.zar_per_token) }}</div>
+  </div>
+  <div class="pdf-stat">
+    <div class="pdf-stat-label">Credits Used</div>
+    <div class="pdf-stat-value">{{ "%.2f"|format(result.total_debited) }}</div>
+    <div class="pdf-stat-sub">R {{ "%.2f"|format(result.total_zar) }}</div>
+  </div>
+  <div class="pdf-stat">
+    <div class="pdf-stat-label">Transactions</div>
+    <div class="pdf-stat-value">{{ result.total }}</div>
+    <div class="pdf-stat-sub">in period</div>
+  </div>
+  <div class="pdf-stat">
+    <div class="pdf-stat-label">Net Movement</div>
+    <div class="pdf-stat-value">{{ "%.2f"|format(result.closing_balance - result.opening_balance) }}</div>
+    <div class="pdf-stat-sub">credits (period)</div>
+  </div>
+</div>
+
+<!-- TRANSACTION TABLE -->
+<table>
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Description</th>
+      <th>Category</th>
+      <th>Type</th>
+      <th class="right">Credits</th>
+      <th class="right">ZAR (R)</th>
+      <th class="right">Balance</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in result.rows %}
+    <tr>
+      <td class="mono muted">{{ row.created_at.strftime("%d %b %Y") }}</td>
+      <td style="max-width:220px">{{ row.description }}</td>
+      <td><span class="ref-badge">{{ row.reference_type }}</span></td>
+      <td>
+        <span class="type-badge type-{{ row.type_label | lower | replace('-','') | replace(' ','') }}">
+          {{ row.type_label }}
+        </span>
+      </td>
+      <td class="right">
+        {% if row.is_debit %}
+        <span class="debit">−{{ "%.2f"|format(row.credits) }}</span>
+        {% else %}
+        <span class="credit">+{{ "%.2f"|format(row.credits) }}</span>
+        {% endif %}
+      </td>
+      <td class="right">
+        {% if row.is_debit %}
+        <span class="debit">R {{ "%.2f"|format(row.zar_amount) }}</span>
+        {% else %}
+        <span class="muted">—</span>
+        {% endif %}
+      </td>
+      <td class="right"><span class="neutral">{{ "%.2f"|format(row.balance_after) }}</span></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- BREAKDOWN -->
+{% if result.by_category %}
+<div class="breakdown-grid">
+  <div class="breakdown-section">
+    <div class="breakdown-title">Credits Used by Category</div>
+    {% set max_c = result.by_category.values() | list | max %}
+    {% for name, amount in result.by_category.items() %}
+    <div class="breakdown-row">
+      <div class="b-name">{{ name }}</div>
+      <div class="b-bar"><div class="b-fill" style="width:{{ ((amount / max_c) * 100)|int }}%"></div></div>
+      <div class="b-count">{{ "%.2f"|format(amount) }} cr</div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="breakdown-section">
+    <div class="breakdown-title">ZAR Spend by Category</div>
+    {% set max_z = result.by_category.values() | list | max %}
+    {% for name, amount in result.by_category.items() %}
+    <div class="breakdown-row">
+      <div class="b-name">{{ name }}</div>
+      <div class="b-bar"><div class="b-fill" style="width:{{ ((amount / max_z) * 100)|int }}%"></div></div>
+      <div class="b-count">R {{ "%.2f"|format(amount * result.zar_per_token) }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="pdf-footer-note">
+  Confidential · Generated by NOCTIV RadioMonitor · {{ result.generated_at.strftime("%d %b %Y %H:%M") }} UTC ·
+  Credits are non-refundable unless otherwise agreed. This statement is for account reference only and does not constitute a VAT invoice.
+</div>
+</body>
+</html>
