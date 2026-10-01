@@ -6,6 +6,8 @@ ALTER TABLE [dbo].[Subscriber]
 ADD [BillingMode] VARCHAR(10) NOT NULL
     CONSTRAINT DF_Subscriber_BillingMode DEFAULT 'prepaid';
 
+GO
+
 ALTER TABLE [dbo].[Subscriber]
 ADD CONSTRAINT CK_Subscriber_BillingMode
     CHECK ([BillingMode] IN ('prepaid', 'postpaid'));
