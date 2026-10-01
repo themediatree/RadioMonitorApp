@@ -206,7 +206,6 @@
                     placeholder="none"
                     class="form-input" style="width:110px"
                     oninput="calcUpdate()"
-                    {% if svc.key != 'commercial' %}style="width:110px;opacity:0.4" title="Registration fee only applies to commercials"{% endif %}
                     {% if svc.key == 'spectrum' %}disabled{% endif %}
                 >
             </td>
@@ -272,13 +271,23 @@ function calcUpdate(){
         if(svc === 'word')       reps = Math.max(1, keywords);
         // For word: per-period base (no keyword multiplier anymore — infra cost = stations × hours)
 
+        // Spectrum is a future ICASA feature — show zeroes, exclude from totals
+        if(svc === 'spectrum'){
+            document.getElementById('c-base-'+svc).textContent  = fmt(0);
+            document.getElementById('c-rfee-'+svc).textContent  = '—';
+            document.getElementById('c-total-'+svc).textContent = fmt(0);
+            document.getElementById('c-zar-'+svc).textContent   = 'R 0.00';
+            return;
+        }
+
         var base = Math.round(baseHours * rate * 10000) / 10000;
-        var regFeeTotal = (svc === 'commercial') ? rfee * spots : 0;
+        // Commercial reg fee scales by number of spots; all others are a flat one-time charge
+        var regFeeTotal = (svc === 'commercial') ? rfee * spots : rfee;
         var total = base + regFeeTotal;
         var zar   = Math.round(total * ZAR_PER_TOKEN * 100) / 100;
 
         document.getElementById('c-base-'+svc).textContent  = fmt(base);
-        document.getElementById('c-rfee-'+svc).textContent  = svc==='commercial' ? fmt(regFeeTotal) : '—';
+        document.getElementById('c-rfee-'+svc).textContent  = rfee > 0 ? fmt(regFeeTotal) : '—';
         document.getElementById('c-total-'+svc).textContent = fmt(total);
         document.getElementById('c-zar-'+svc).textContent   = 'R ' + fmtZar(zar);
 
