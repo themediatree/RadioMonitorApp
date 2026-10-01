@@ -174,6 +174,10 @@ def subscriber_service_rates(
         for svc in DEFAULT_SERVICE_RATES
     ]
 
+    # ZAR/token rate for the subscriber's plan (for calculator preview)
+    billing_cfg = db.query(BillingConfig).filter(BillingConfig.PlanCode == sub.SubscriptionPlan).first()
+    zar_per_token = float(billing_cfg.ZARPerToken) if billing_cfg else 3.60
+
     return templates.TemplateResponse(
         request=request,
         name="admin/subscriber_service_rates.html",
@@ -182,6 +186,7 @@ def subscriber_service_rates(
             "subscriber": sub,
             "services": services,
             "saved": request.query_params.get("saved", ""),
+            "zar_per_token": zar_per_token,
         },
     )
 

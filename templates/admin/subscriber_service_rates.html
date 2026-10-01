@@ -118,7 +118,7 @@
     </form>
 </section>
 
-<section class="card">
+<section class="card" style="margin-bottom:1.5rem">
     <h3 style="margin-bottom:0.5rem">How multipliers work</h3>
     <p class="muted small">
         <strong>Cost = base_tokens × multiplier</strong>, where base_tokens = stations × hours (minimum 24 h).<br>
@@ -129,4 +129,207 @@
         Leave blank for no flat fee (default). Applies to both the app dashboard and API registrations.
     </p>
 </section>
+
+{# ── Rate Calculator ─────────────────────────────────────────────────────── #}
+<section class="card" id="calc-card">
+    <h3 style="margin-bottom:0.25rem">Rate calculator</h3>
+    <p class="muted small" style="margin-bottom:1.25rem">
+        Sandbox — tune rates below and preview what this subscriber would pay across all services.
+        Click <strong>Apply &amp; save these rates</strong> to write them to the overrides table.
+    </p>
+
+    {# Scenario inputs #}
+    <div style="display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;align-items:flex-end">
+        <label class="form-field" style="flex:0 0 auto;margin:0">
+            <span class="form-label" style="font-size:0.78rem">Stations</span>
+            <input id="c-stations" type="number" min="1" value="3" class="form-input" style="width:80px" oninput="calcUpdate()">
+        </label>
+        <label class="form-field" style="flex:0 0 auto;margin:0">
+            <span class="form-label" style="font-size:0.78rem">Days</span>
+            <input id="c-days" type="number" min="1" value="30" class="form-input" style="width:80px" oninput="calcUpdate()">
+        </label>
+        <label class="form-field" style="flex:0 0 auto;margin:0">
+            <span class="form-label" style="font-size:0.78rem">Commercial spots</span>
+            <input id="c-spots" type="number" min="0" value="5" class="form-input" style="width:90px" oninput="calcUpdate()">
+        </label>
+        <label class="form-field" style="flex:0 0 auto;margin:0">
+            <span class="form-label" style="font-size:0.78rem">Keywords monitored</span>
+            <input id="c-keywords" type="number" min="0" value="10" class="form-input" style="width:90px" oninput="calcUpdate()">
+        </label>
+        <div style="flex:0 0 auto;padding-bottom:2px">
+            <span class="muted small">Plan rate: <strong style="font-family:var(--mono)">R {{ '%.2f'|format(zar_per_token) }}/token</strong></span>
+        </div>
+    </div>
+
+    {# Sandbox rate inputs #}
+    <div class="table-scroll" style="margin-bottom:1.25rem">
+    <table class="data-table" id="calc-table">
+        <thead>
+            <tr>
+                <th>Service</th>
+                <th>Sandbox rate ×</th>
+                <th>Reg. fee (tokens)</th>
+                <th>Base tokens</th>
+                <th>+Reg fee</th>
+                <th>Total tokens</th>
+                <th>ZAR (R)</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for svc in services %}
+        <tr data-svc="{{ svc.key }}">
+            <td>
+                <strong>{{ svc.label }}</strong><br>
+                <span class="muted small" style="font-family:var(--mono)">{{ svc.key }}</span>
+            </td>
+            <td>
+                <div style="display:flex;align-items:center;gap:0.4rem">
+                    <span class="muted">×</span>
+                    <input
+                        type="number"
+                        id="c-rate-{{ svc.key }}"
+                        step="0.0001" min="0"
+                        value="{{ '%.4f'|format(svc.effective) }}"
+                        class="form-input" style="width:110px"
+                        oninput="calcUpdate()"
+                    >
+                </div>
+            </td>
+            <td>
+                <input
+                    type="number"
+                    id="c-regfee-{{ svc.key }}"
+                    step="0.0001" min="0"
+                    value="{{ '%.4f'|format(svc.reg_fee) if svc.reg_fee is not none else '' }}"
+                    placeholder="none"
+                    class="form-input" style="width:110px"
+                    oninput="calcUpdate()"
+                    {% if svc.key != 'commercial' %}style="width:110px;opacity:0.4" title="Registration fee only applies to commercials"{% endif %}
+                >
+            </td>
+            <td class="muted" style="font-family:var(--mono)" id="c-base-{{ svc.key }}">—</td>
+            <td class="muted" style="font-family:var(--mono)" id="c-rfee-{{ svc.key }}">—</td>
+            <td style="font-family:var(--mono);font-weight:600" id="c-total-{{ svc.key }}">—</td>
+            <td style="font-family:var(--mono);color:var(--cobalt)" id="c-zar-{{ svc.key }}">—</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="5" style="text-align:right;color:var(--muted);font-size:0.82rem">Grand total (all services combined)</td>
+                <td style="font-family:var(--mono);font-weight:700" id="c-grand-tokens">—</td>
+                <td style="font-family:var(--mono);font-weight:700;color:var(--cobalt)" id="c-grand-zar">—</td>
+            </tr>
+        </tfoot>
+    </table>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+        <button type="button" class="btn btn-primary" onclick="applyAndSave()">Apply &amp; save these rates</button>
+        <button type="button" class="btn btn-ghost" onclick="calcReset()">Reset to current effective rates</button>
+        <span class="muted small" id="calc-note"></span>
+    </div>
+</section>
+
+{# Hidden apply form — populated by JS and submitted #}
+<form id="apply-form" method="post" action="/admin/subscribers/{{ subscriber.SubscriberID }}/service-rates" style="display:none"></form>
+
+<script>
+(function(){
+var ZAR_PER_TOKEN = {{ zar_per_token }};
+
+// Service keys and which ones support reg fee
+var SVCS = {{ services | map(attribute='key') | list | tojson }};
+var EFFECTIVE = {
+    {% for svc in services %}"{{ svc.key }}": {{ '%.4f'|format(svc.effective) }},{% endfor %}
+};
+var EFF_REG_FEE = {
+    {% for svc in services %}"{{ svc.key }}": {{ svc.reg_fee if svc.reg_fee is not none else 'null' }},{% endfor %}
+};
+
+function calcUpdate(){
+    var stations = Math.max(1, parseInt(document.getElementById('c-stations').value)||1);
+    var days     = Math.max(1, parseInt(document.getElementById('c-days').value)||1);
+    var spots    = Math.max(0, parseInt(document.getElementById('c-spots').value)||0);
+    var keywords = Math.max(0, parseInt(document.getElementById('c-keywords').value)||0);
+    var baseHours = stations * days * 24;
+
+    // Per-service specific base: transcription uses fewer hours if < 24h/day would apply,
+    // but this calculator uses the full station-day window as a conservative estimate.
+    var grandTokens = 0, grandZar = 0;
+
+    SVCS.forEach(function(svc){
+        var rate = parseFloat(document.getElementById('c-rate-'+svc).value) || 0;
+        var rfeeRaw = document.getElementById('c-regfee-'+svc).value.trim();
+        var rfee = rfeeRaw !== '' ? (parseFloat(rfeeRaw)||0) : 0;
+
+        // Determine repetitions for this service
+        var reps = 1;
+        if(svc === 'commercial') reps = Math.max(1, spots);
+        if(svc === 'word')       reps = Math.max(1, keywords);
+        // For word: per-period base (no keyword multiplier anymore — infra cost = stations × hours)
+
+        var base = Math.round(baseHours * rate * 10000) / 10000;
+        var regFeeTotal = (svc === 'commercial') ? rfee * spots : 0;
+        var total = base + regFeeTotal;
+        var zar   = Math.round(total * ZAR_PER_TOKEN * 100) / 100;
+
+        document.getElementById('c-base-'+svc).textContent  = fmt(base);
+        document.getElementById('c-rfee-'+svc).textContent  = svc==='commercial' ? fmt(regFeeTotal) : '—';
+        document.getElementById('c-total-'+svc).textContent = fmt(total);
+        document.getElementById('c-zar-'+svc).textContent   = 'R ' + fmtZar(zar);
+
+        grandTokens += total;
+        grandZar    += zar;
+    });
+
+    document.getElementById('c-grand-tokens').textContent = fmt(Math.round(grandTokens*10000)/10000);
+    document.getElementById('c-grand-zar').textContent    = 'R ' + fmtZar(Math.round(grandZar*100)/100);
+}
+
+function fmt(n){ return n.toLocaleString('en-ZA', {minimumFractionDigits:2, maximumFractionDigits:4}); }
+function fmtZar(n){ return n.toLocaleString('en-ZA', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+window.calcUpdate = calcUpdate;
+
+window.calcReset = function(){
+    SVCS.forEach(function(svc){
+        document.getElementById('c-rate-'+svc).value = EFFECTIVE[svc].toFixed(4);
+        var rfEl = document.getElementById('c-regfee-'+svc);
+        rfEl.value = EFF_REG_FEE[svc] !== null ? parseFloat(EFF_REG_FEE[svc]).toFixed(4) : '';
+    });
+    calcUpdate();
+};
+
+window.applyAndSave = function(){
+    var form = document.getElementById('apply-form');
+    form.innerHTML = '';
+    SVCS.forEach(function(svc){
+        var rate = document.getElementById('c-rate-'+svc).value.trim();
+        var rfee = document.getElementById('c-regfee-'+svc).value.trim();
+        if(rate){
+            var i = document.createElement('input');
+            i.type='hidden'; i.name='rate_'+svc; i.value=rate;
+            form.appendChild(i);
+        }
+        if(rfee){
+            var j = document.createElement('input');
+            j.type='hidden'; j.name='reg_fee_'+svc; j.value=rfee;
+            form.appendChild(j);
+        } else {
+            // Clear reg fee if it was set and now blank
+            if(EFF_REG_FEE[svc] !== null){
+                var k = document.createElement('input');
+                k.type='hidden'; k.name='clear_reg_fee_'+svc; k.value='1';
+                form.appendChild(k);
+            }
+        }
+    });
+    form.submit();
+};
+
+// Run on load
+calcUpdate();
+})();
+</script>
 {% endblock %}
