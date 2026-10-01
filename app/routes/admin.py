@@ -227,6 +227,12 @@ def update_subscriber(
     if billing_mode not in ("prepaid", "postpaid"):
         billing_mode = "prepaid"
 
+    # If the submitted status isn't admin-settable (e.g. "active" shown as read-only),
+    # keep the subscriber's current status rather than clobbering it.
+    from app.models.subscriber import ADMIN_SETTABLE_STATUSES
+    if status_value not in ADMIN_SETTABLE_STATUSES:
+        status_value = subscriber.SubscriberStatus
+
     try:
         subscriber_service.update_subscriber(
             db, subscriber,

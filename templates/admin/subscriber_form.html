@@ -63,6 +63,10 @@
         <label class="form-field">
             <span class="form-label">Status</span>
             <select name="status" class="form-input">
+                {# Always include the current status so it stays selected on save #}
+                {% if subscriber and subscriber.SubscriberStatus not in statuses %}
+                <option value="{{ subscriber.SubscriberStatus }}" selected>{{ subscriber.SubscriberStatus }}</option>
+                {% endif %}
                 {% for st in statuses %}
                 <option value="{{ st }}" {{ 'selected' if (subscriber and subscriber.SubscriberStatus==st) or form.get('status')==st }}>{{ st }}</option>
                 {% endfor %}
