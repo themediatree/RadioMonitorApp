@@ -149,7 +149,7 @@
             <input id="c-days" type="number" min="1" value="30" class="form-input" style="width:80px" oninput="calcUpdate()">
         </label>
         <label class="form-field" style="flex:0 0 auto;margin:0">
-            <span class="form-label" style="font-size:0.78rem">Commercial spots</span>
+            <span class="form-label" style="font-size:0.78rem">Commercials</span>
             <input id="c-spots" type="number" min="0" value="5" class="form-input" style="width:90px" oninput="calcUpdate()">
         </label>
         <label class="form-field" style="flex:0 0 auto;margin:0">
@@ -192,7 +192,9 @@
                         value="{{ '%.4f'|format(svc.effective) }}"
                         class="form-input" style="width:110px"
                         oninput="calcUpdate()"
+                        {% if svc.key == 'spectrum' %}disabled title="Spectrum / ICASA — coming soon"{% endif %}
                     >
+                    {% if svc.key == 'spectrum' %}<span class="muted small" style="white-space:nowrap">ICASA</span>{% endif %}
                 </div>
             </td>
             <td>
@@ -205,6 +207,7 @@
                     class="form-input" style="width:110px"
                     oninput="calcUpdate()"
                     {% if svc.key != 'commercial' %}style="width:110px;opacity:0.4" title="Registration fee only applies to commercials"{% endif %}
+                    {% if svc.key == 'spectrum' %}disabled{% endif %}
                 >
             </td>
             <td class="muted" style="font-family:var(--mono)" id="c-base-{{ svc.key }}">—</td>
@@ -279,8 +282,10 @@ function calcUpdate(){
         document.getElementById('c-total-'+svc).textContent = fmt(total);
         document.getElementById('c-zar-'+svc).textContent   = 'R ' + fmtZar(zar);
 
-        grandTokens += total;
-        grandZar    += zar;
+        if(svc !== 'spectrum'){
+            grandTokens += total;
+            grandZar    += zar;
+        }
     });
 
     document.getElementById('c-grand-tokens').textContent = fmt(Math.round(grandTokens*10000)/10000);
