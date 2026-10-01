@@ -166,6 +166,9 @@ def song_subscribe_form(
     _fx = float(get_exchange_rate(db))
     _cur = get_currency(request)
 
+    from app.services.token_service import is_postpaid as _is_postpaid
+    _postpaid_flag = _is_postpaid(db, user.SubscriberID) if user.SubscriberID else False
+
     return templates.TemplateResponse(
         request=request,
         name="app/songs/subscribe.html",
@@ -179,6 +182,7 @@ def song_subscribe_form(
             "rp_zar_per_token": _zar,
             "rp_fx_rate": _fx,
             "rp_currency": _cur,
+            "is_postpaid": _postpaid_flag,
             **right_panel_context(user, db, request),
         },
     )
@@ -217,6 +221,7 @@ async def song_subscribe_submit(
         _bal = get_balance(db, user.SubscriberID) if user.SubscriberID else Decimal("0")
         _sub = db.get(Subscriber, user.SubscriberID) if user.SubscriberID else None
         _plan = _sub.SubscriptionPlan if _sub else "standard"
+        from app.services.token_service import is_postpaid as _is_postpaid
         return templates.TemplateResponse(
             request=request,
             name="app/songs/subscribe.html",
@@ -233,6 +238,7 @@ async def song_subscribe_submit(
                 "rp_zar_per_token": float(get_rate(db, _plan)),
                 "rp_fx_rate": float(get_exchange_rate(db)),
                 "rp_currency": get_currency(request),
+                "is_postpaid": _is_postpaid(db, user.SubscriberID) if user.SubscriberID else False,
             },
             status_code=400,
         )
@@ -274,11 +280,12 @@ async def song_subscribe_submit(
         return rerender(str(e))
 
     # Balance check + debit
-    from app.services.token_service import calculate_cost_for_service, debit, get_balance, InsufficientTokensError
+    from app.services.token_service import calculate_cost_for_service, debit, get_balance, InsufficientTokensError, is_postpaid
     from decimal import Decimal
     token_cost = calculate_cost_for_service(db, target_sub_id, "song", len(station_ids), sd, ed)
     balance = get_balance(db, target_sub_id)
-    if balance < token_cost:
+    _postpaid = is_postpaid(db, target_sub_id)
+    if not _postpaid and balance < token_cost:
         db.rollback()
         return rerender(
             f"Insufficient credits. This subscription requires {token_cost:.2f} credits "
@@ -298,6 +305,7 @@ async def song_subscribe_submit(
             reference_id=sub.SubscriptionID,
             reference_type="song",
             created_by_user_id=user.UserID,
+            bypass_balance_check=_postpaid,
         )
         db.commit()
     except Exception as e:
@@ -356,7 +364,7 @@ def song_subscribe_extend(
     from app.services.schedule_service import (
         get_subscription_schedules, is_detection_in_schedule, extend_schedule_to_cover
     )
-    from app.services.token_service import get_balance, debit, get_effective_rate
+    from app.services.token_service import get_balance, debit, get_effective_rate, is_postpaid
     from decimal import Decimal
 
     # Verify ownership
@@ -408,7 +416,8 @@ def song_subscribe_extend(
         service_rate = get_effective_rate(db, sub.SubscriberID, "song")
         extension_cost = (result["cost"] * service_rate).quantize(Decimal("0.0001"))
         balance = get_balance(db, sub.SubscriberID)
-        if balance >= extension_cost:
+        postpaid = is_postpaid(db, sub.SubscriberID)
+        if postpaid or balance >= extension_cost:
             debit(
                 db,
                 subscriber_id=sub.SubscriberID,
@@ -417,6 +426,7 @@ def song_subscribe_extend(
                 reference_id=subscription_id,
                 reference_type="song_extend",
                 created_by_user_id=user.UserID,
+                bypass_balance_check=postpaid,
             )
 
     db.commit()

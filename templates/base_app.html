@@ -857,6 +857,7 @@ select option {
   <aside class="right-panel">
     {% if user.user_type.value != "internal" and user.SubscriberID %}
     <div class="rp-section">
+      {% if not is_postpaid %}
       <div class="rp-label">Credit balance</div>
       <div class="rp-balance">
         <div class="rp-balance-num" id="rp-balance">{{ "%g"|format(token_balance|float) if token_balance is defined else "—" }}</div>
@@ -866,9 +867,19 @@ select option {
              data-zar="{{ rp_balance_zar }}" data-usd="{{ rp_balance_usd }}">{{ rp_balance_zar if rp_currency == 'ZAR' else rp_balance_usd }}</div>
         {% endif %}
       </div>
+      {% else %}
+      <div class="rp-label">Usage</div>
+      {% if rp_balance_zar is defined %}
+      <div class="rp-balance">
+        <div class="rp-balance-label" style="font-size:0.8rem;color:var(--white)"
+             data-zar="{{ rp_balance_zar }}" data-usd="{{ rp_balance_usd }}">{{ rp_balance_zar if rp_currency == 'ZAR' else rp_balance_usd }}</div>
+        <div class="rp-balance-label">current spend</div>
+      </div>
+      {% endif %}
+      {% endif %}
       <a href="/account/tokens" class="rp-action" style="margin-top:0.75rem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        View credit history
+        View usage history
       </a>
     </div>
     {% endif %}
@@ -891,7 +902,9 @@ select option {
       <form method="post" action="{{ out_of_schedule_update_url }}"
             onsubmit="return confirm('Extend your registration to cover these detections and bill accordingly?')">
         <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.5rem">
-          Additional cost: <strong style="color:var(--white)">{{ out_of_schedule_cost }}</strong> credits
+          Additional cost:
+          {% if not is_postpaid %}<strong style="color:var(--white)">{{ out_of_schedule_cost }}</strong> credits —{% endif %}
+          <strong style="color:var(--white)">{{ out_of_schedule_cost_zar if out_of_schedule_cost_zar is defined else "" }}</strong>
         </div>
         <button type="submit" class="btn btn-primary" style="width:100%;font-size:0.8rem">
           UPDATE / INCLUDE

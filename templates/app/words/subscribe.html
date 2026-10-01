@@ -50,13 +50,15 @@
     <div class="card cost-preview" id="cost-preview" style="display:none">
         <p class="small" style="margin:0">
             <strong>Estimated cost:</strong>
-            <span id="cost-value">—</span> credits
+            {% if not is_postpaid %}<span id="cost-value">—</span> credits{% else %}<span id="cost-value" style="display:none">—</span>{% endif %}
             <span id="cost-currency" data-zar="" data-usd="" style="font-weight:600;color:var(--white)"></span>
             <span id="cost-breakdown" class="muted" style="font-size:0.85em"></span>
         </p>
+        {% if not is_postpaid %}
         <p class="muted small" style="margin-top:4px">
             Your balance: <strong>{{ "%g"|format(token_balance) }}</strong> credits
         </p>
+        {% endif %}
     </div>	
 
     <div class="form-actions">

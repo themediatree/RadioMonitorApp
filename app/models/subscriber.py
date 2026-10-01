@@ -44,6 +44,11 @@ SUBSCRIBER_STATUSES = ("pending", "active", "expired_grace", "archived", "cancel
 # Statuses an admin can manually set (active is set automatically on invite acceptance)
 ADMIN_SETTABLE_STATUSES = ("pending", "expired_grace", "archived", "cancelled")
 
+# Billing modes
+# prepaid  — default; subscriber must hold enough tokens before registering a service
+# postpaid — invoice billing; balance check bypassed; token language hidden from subscriber UI
+BILLING_MODES = ("prepaid", "postpaid")
+
 
 class Subscriber(Base):
     __tablename__ = "Subscriber"
@@ -92,6 +97,9 @@ class Subscriber(Base):
     StationID: Mapped[Optional[int]] = mapped_column(
         ForeignKey("Station.StationID"), nullable=True
     )
+    # 'prepaid' = token balance required upfront; 'postpaid' = invoice billing, no balance gate
+    BillingMode: Mapped[str] = mapped_column(String(10), nullable=False, default="prepaid")
+
     SubscriptionStart: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     SubscriptionEnd: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     CreatedAt: Mapped[datetime] = mapped_column(

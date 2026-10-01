@@ -195,6 +195,7 @@ def update_subscriber(
     contact_email: Annotated[str, Form()] = "",
     contact_phone: Annotated[str, Form()] = "",
     company_name: Annotated[str, Form()] = "",
+    billing_mode: Annotated[str, Form()] = "prepaid",
 ):
     subscriber = db.get(Subscriber, subscriber_id)
     if subscriber is None:
@@ -217,10 +218,14 @@ def update_subscriber(
                     "name": name, "plan": plan, "status": status_value,
                     "other_description": other_description,
                     "contact_email": contact_email, "contact_phone": contact_phone,
+                    "billing_mode": billing_mode,
                 },
             },
             status_code=status.HTTP_400_BAD_REQUEST,
         )
+
+    if billing_mode not in ("prepaid", "postpaid"):
+        billing_mode = "prepaid"
 
     try:
         subscriber_service.update_subscriber(
@@ -229,6 +234,7 @@ def update_subscriber(
             company_name=company_name,
             other_description=other_description,
             contact_email=contact_email, contact_phone=contact_phone,
+            billing_mode=billing_mode,
         )
     except SubscriberError as e:
         return _rerender(str(e))

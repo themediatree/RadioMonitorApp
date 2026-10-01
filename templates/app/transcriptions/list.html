@@ -11,7 +11,7 @@
 
 {% if rows %}
 <div class="table-scroll"><table class="data-table">
-  <thead><tr><th>Station</th><th>Date range</th><th>Time range</th><th>Format</th><th>Status</th><th>Chunks</th><th>Credits</th><th>Source</th><th>Requested</th><th></th></tr></thead>
+  <thead><tr><th>Station</th><th>Date range</th><th>Time range</th><th>Format</th><th>Status</th><th>Chunks</th>{% if not is_postpaid %}<th>Credits</th>{% endif %}<th>Source</th><th>Requested</th><th></th></tr></thead>
   <tbody>
   {% for req in rows %}
   <tr>
@@ -34,7 +34,7 @@
       {% else %}<span class="badge badge-withdrawn">Pending</span>{% endif %}
     </td>
     <td class="muted">{{ req.ChunkCount or "—" }}</td>
-    <td class="muted">{{ "%g"|format(req.TokensDebited|float) }}</td>
+    {% if not is_postpaid %}<td class="muted">{{ "%g"|format(req.TokensDebited|float) }}</td>{% endif %}
     <td><span class="badge badge-{{ 'pending' if req.Source == 'api' else 'active' }}">{{ req.Source }}</span></td>
     <td class="muted small">{{ req.CreatedAt.strftime("%Y-%m-%d %H:%M") }}</td>
     <td>

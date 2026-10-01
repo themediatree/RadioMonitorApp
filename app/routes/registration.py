@@ -148,7 +148,7 @@ async def register_submit(
     upload = raw_form.get("upload") or upload
 
     def rerender(error: str):
-        from app.services.token_service import get_balance
+        from app.services.token_service import get_balance, is_postpaid as _is_postpaid
         balance = get_balance(db, user.SubscriberID) if user.SubscriberID else 0
         return templates.TemplateResponse(
             request=request,
@@ -159,6 +159,7 @@ async def register_submit(
                 "stations": get_tbfp_stations_for_picker(db),
                 "terms_text": TERMS_TEXT,
                 "token_balance": float(balance),
+                "is_postpaid": _is_postpaid(db, user.SubscriberID) if user.SubscriberID else False,
                 "error": error,
                 "form": {
                     "campaign_name": campaign_name,
@@ -464,7 +465,8 @@ async def register_submit(
         # Debit after commit so the commercial row exists for the reference.
         try:
             from decimal import Decimal
-            from app.services.token_service import get_effective_registration_fee
+            from app.services.token_service import get_effective_registration_fee, is_postpaid
+            _postpaid = is_postpaid(db, target_subscriber_id)
             debit(
                 db, target_subscriber_id, token_cost,
                 description=(
@@ -475,6 +477,7 @@ async def register_submit(
                 reference_id=commercial.CommercialID,
                 reference_type="commercial",
                 created_by_user_id=user.UserID,
+                bypass_balance_check=_postpaid,
             )
             # Flat per-registration fee (if configured for this subscriber)
             reg_fee = get_effective_registration_fee(db, target_subscriber_id, "commercial")
@@ -485,6 +488,7 @@ async def register_submit(
                     reference_id=commercial.CommercialID,
                     reference_type="commercial",
                     created_by_user_id=user.UserID,
+                    bypass_balance_check=_postpaid,
                 )
             db.commit()
         except Exception as e:

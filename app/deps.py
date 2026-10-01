@@ -204,6 +204,8 @@ def right_panel_context(user: "User", db, request: Request) -> dict:
         else None
     )
 
+    is_postpaid_sub = (sub.BillingMode == "postpaid") if sub else False
+
     return {
         "token_balance": token_balance,
         "rp_balance_zar": format_zar(tokens_to_zar(token_balance, rate)),
@@ -213,6 +215,7 @@ def right_panel_context(user: "User", db, request: Request) -> dict:
         "rp_currency": currency,
         "recent_detections": recent_rows,
         "trial_cfg": trial_cfg,
+        "is_postpaid": is_postpaid_sub,
     }
 
 

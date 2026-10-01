@@ -223,7 +223,7 @@ async def report_detection_accept_oos(
 ):
     """Accept out-of-spot detections from within the Detection Report. Body: {detection_ids: [int]}"""
     from fastapi import HTTPException
-    from app.services.token_service import debit
+    from app.services.token_service import debit, is_postpaid
     from app.models.detection import Detection
     from app.services.detection_service import get_visible_detection
 
@@ -258,6 +258,7 @@ async def report_detection_accept_oos(
             reference_type="det_accept_bulk",
             created_by_user_id=user.UserID,
             source="app",
+            bypass_balance_check=is_postpaid(db, user.SubscriberID),
         )
 
     db.commit()

@@ -70,6 +70,7 @@ def token_balance(
     balance_tokens = Decimal(str(account.TokenBalance or 0))
 
     currency = get_currency(request)
+    is_postpaid = subscriber.BillingMode == "postpaid" if subscriber else False
 
     return templates.TemplateResponse(
         request=request,
@@ -85,6 +86,7 @@ def token_balance(
             "consumed_zar": format_zar(tokens_to_zar(Decimal(str(account.TotalConsumed or 0)), rate)),
             "consumed_usd": format_usd(tokens_to_usd(Decimal(str(account.TotalConsumed or 0)), rate, fx)),
             "currency": currency,
+            "is_postpaid": is_postpaid,
             **right_panel_context(user, db, request),
         },
     )
@@ -111,6 +113,7 @@ def token_history(
     rate = get_rate(db, plan_code)
     fx = get_exchange_rate(db)
     currency = get_currency(request)
+    is_postpaid = sub.BillingMode == "postpaid" if sub else False
 
     return templates.TemplateResponse(
         request=request,
@@ -124,6 +127,7 @@ def token_history(
             "zar_per_token": float(rate),
             "fx_rate": float(fx),
             "currency": currency,
+            "is_postpaid": is_postpaid,
             **right_panel_context(user, db, request),
         },
     )
@@ -210,6 +214,11 @@ def purchase_credits(
     db: Annotated[Session, Depends(get_db)],
 ):
     from app.deps import right_panel_context
+    from app.models.subscriber import Subscriber
+    # Postpaid subscribers are invoiced — there is nothing to purchase.
+    sub = db.get(Subscriber, user.SubscriberID) if user.SubscriberID else None
+    if sub and sub.BillingMode == "postpaid":
+        return RedirectResponse("/account/tokens", status_code=302)
     return templates.TemplateResponse(
         request=request,
         name="app/tokens/purchase.html",

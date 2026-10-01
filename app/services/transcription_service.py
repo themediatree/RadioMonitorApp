@@ -108,7 +108,7 @@ def create_request(
     cost: Optional[Decimal] = None,
 ) -> TranscriptionRequest:
     """Creates a TranscriptionRequest, debits tokens, attempts processing."""
-    from app.services.token_service import get_effective_rate, debit
+    from app.services.token_service import get_effective_rate, debit, is_postpaid
     from decimal import ROUND_HALF_UP
     import json as _json
 
@@ -153,6 +153,7 @@ def create_request(
         reference_type="transcription",
         created_by_user_id=user_id,
         source=source,
+        bypass_balance_check=is_postpaid(db, subscriber_id),
     )
     db.flush()
 

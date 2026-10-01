@@ -69,6 +69,14 @@
             </select>
         </label>
         <label class="form-field">
+            <span class="form-label">Billing mode</span>
+            <select name="billing_mode" class="form-input">
+                <option value="prepaid" {{ 'selected' if (subscriber and subscriber.BillingMode=='prepaid') or (not subscriber and form.get('billing_mode','prepaid')=='prepaid') }}>Prepaid (token balance required)</option>
+                <option value="postpaid" {{ 'selected' if (subscriber and subscriber.BillingMode=='postpaid') or form.get('billing_mode')=='postpaid' }}>Postpaid (monthly / weekly invoice)</option>
+            </select>
+        </label>
+
+        <label class="form-field">
             <span class="form-label">Contact email</span>
             <input name="contact_email" type="email" class="form-input" value="{{ subscriber.ContactEmail if subscriber else form.get('contact_email','') }}">
         </label>

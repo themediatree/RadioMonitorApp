@@ -167,7 +167,7 @@ async def api_register_commercial(
     from app.models.station import Station
     from app.models.campaign import Commercial, CampaignCommercial
     from app.services import registration_service
-    from app.services.token_service import get_balance, calculate_cost, calculate_cost_for_service, debit
+    from app.services.token_service import get_balance, calculate_cost, calculate_cost_for_service, debit, is_postpaid
     from app.services.schedule_service import save_campaign_station_schedules
     import tempfile, os, shutil
 
@@ -284,17 +284,18 @@ async def api_register_commercial(
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"File staging failed: {e}")
 
+        from app.services.token_service import get_effective_registration_fee, is_postpaid
+        _postpaid = is_postpaid(db, subscriber.SubscriberID)
         debit(db, subscriber_id=subscriber.SubscriberID, amount=cost,
               description=f"Commercial registration: {clean_tape_id}",
               reference_id=commercial.CommercialID, reference_type="commercial",
-              source="api")
-        from app.services.token_service import get_effective_registration_fee
+              source="api", bypass_balance_check=_postpaid)
         reg_fee = get_effective_registration_fee(db, subscriber.SubscriberID, "commercial")
         if reg_fee and reg_fee > 0:
             debit(db, subscriber_id=subscriber.SubscriberID, amount=reg_fee,
                   description=f"Commercial registration fee: {clean_tape_id}",
                   reference_id=commercial.CommercialID, reference_type="commercial",
-                  source="api")
+                  source="api", bypass_balance_check=_postpaid)
         db.commit()
 
         return JSONResponse(status_code=201, content={
@@ -385,7 +386,7 @@ async def api_subscribe_song(
         debit(db, subscriber_id=subscriber.SubscriberID, amount=cost,
               description=f"Song subscription: {sub.TargetValue}",
               reference_id=sub.SubscriptionID, reference_type="song",
-              source="api")
+              source="api", bypass_balance_check=is_postpaid(db, subscriber.SubscriberID))
         db.commit()
 
         return JSONResponse(status_code=201, content={
@@ -428,7 +429,7 @@ async def api_subscribe_keyword(
     from datetime import date as date_type
     from app.models.station import Station
     from app.services.subscription_service import create_keyword_subscription
-    from app.services.token_service import get_balance, calculate_cost, calculate_cost_for_service, debit
+    from app.services.token_service import get_balance, calculate_cost, calculate_cost_for_service, debit, is_postpaid
     from app.services.schedule_service import save_schedules
 
     schedule_dicts = _parse_schedule_windows(schedule_windows)
@@ -465,7 +466,7 @@ async def api_subscribe_keyword(
         debit(db, subscriber_id=subscriber.SubscriberID, amount=cost,
               description=f"Keyword subscription: {sub.TargetValue}",
               reference_id=sub.SubscriptionID, reference_type="word",
-              source="api")
+              source="api", bypass_balance_check=is_postpaid(db, subscriber.SubscriberID))
         db.commit()
 
         return JSONResponse(status_code=201, content={

@@ -103,6 +103,16 @@ def format_cost_preview(
 # Account management
 # ---------------------------------------------------------------------------
 
+def is_postpaid(db: Session, subscriber_id: int) -> bool:
+    """Return True if the subscriber is on postpaid (invoice) billing mode."""
+    try:
+        from app.models.subscriber import Subscriber
+        sub = db.get(Subscriber, subscriber_id)
+        return sub is not None and getattr(sub, "BillingMode", "prepaid") == "postpaid"
+    except Exception:
+        return False
+
+
 def get_or_create_account(db: Session, subscriber_id: int) -> SubscriberTokenAccount:
     """Fetch or create the token account for a Subscriber."""
     account = (

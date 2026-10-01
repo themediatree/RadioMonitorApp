@@ -118,14 +118,15 @@
 	<div class="card" id="cost-preview" style="background:rgba(26,79,168,0.08);border:1px solid rgba(26,79,168,0.2);margin-bottom:var(--space-3);display:none">
             <p class="muted small" style="margin:0">
                 <strong>Estimated cost:</strong>
-                <span id="cost-value">—</span> credits
-                &nbsp;·&nbsp;
+                {% if not is_postpaid %}<span id="cost-value">—</span> credits &nbsp;·&nbsp;{% else %}<span id="cost-value" style="display:none">—</span>{% endif %}
                 <span id="cost-currency" data-zar="" data-usd="" style="font-weight:600;color:var(--white)"></span>
                 <span id="cost-breakdown" class="muted" style="font-size:0.85em"></span>
             </p>
+            {% if not is_postpaid %}
             <p class="muted small" style="margin-top:4px">
                 Your credit balance: <strong id="user-balance">{{ token_balance }}</strong> credits
             </p>
+            {% endif %}
         </div>
         
         <div class="form-actions">

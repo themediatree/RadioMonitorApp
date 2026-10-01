@@ -610,8 +610,10 @@ async function rptDoAccept(ids) {
         if (panel) panel.style.display = 'none';
       }
       if (data.credits_debited > 0) {
+        {% if not is_postpaid %}
         var note = document.getElementById('rpt-oos-debit-note');
         if (note) { note.textContent = data.credits_debited + ' credit' + (data.credits_debited !== 1 ? 's' : '') + ' debited.'; note.style.display = ''; }
+        {% endif %}
       }
     } else { alert('Error accepting detections. Please try again.'); }
   } catch(e) { alert('Network error. Please try again.'); }

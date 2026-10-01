@@ -72,9 +72,11 @@ async function doAccept(ids) {
 
       // Show debit summary
       if (data.credits_debited > 0) {
-        var msg = data.credits_debited + ' credit' + (data.credits_debited !== 1 ? 's' : '') + ' debited.';
         var note = document.getElementById('oos-debit-note');
+        {% if not is_postpaid %}
+        var msg = data.credits_debited + ' credit' + (data.credits_debited !== 1 ? 's' : '') + ' debited.';
         if (note) { note.textContent = msg; note.style.display = ''; }
+        {% endif %}
       }
     } else {
       alert('Error accepting detections. Please try again.');

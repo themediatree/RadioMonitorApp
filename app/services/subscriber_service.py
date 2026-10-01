@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.models.station import Station
 from app.models.subscriber import (
+    BILLING_MODES,
     SUBSCRIBER_STATUSES,
     SUBSCRIBER_TYPES,
     Subscriber,
@@ -165,6 +166,7 @@ def update_subscriber(
     other_description: Optional[str] = None,
     contact_email: Optional[str] = None,
     contact_phone: Optional[str] = None,
+    billing_mode: str = "prepaid",
 ) -> Subscriber:
     """Update mutable fields. Type and StationID are NOT changed once set."""
     name = (name or "").strip()
@@ -172,6 +174,8 @@ def update_subscriber(
         raise SubscriberError("A name is required.")
     if status not in SUBSCRIBER_STATUSES:
         raise SubscriberError(f"Invalid status: {status!r}")
+    if billing_mode not in BILLING_MODES:
+        raise SubscriberError(f"Invalid billing mode: {billing_mode!r}")
     _valid_plan(db, plan)
 
     other_description = (other_description or "").strip() or None
@@ -197,6 +201,7 @@ def update_subscriber(
         except PhoneValidationError as e:
             raise SubscriberError(str(e)) from e
     subscriber.ContactPhone = (contact_phone or None)
+    subscriber.BillingMode = billing_mode
     db.flush()
     return subscriber
 

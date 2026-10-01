@@ -31,7 +31,7 @@
       {% else %}<span class="badge badge-withdrawn">Pending</span>{% endif %}
     </dd>
     <dt>Chunks</dt><dd>{{ treq.ChunkCount or "—" }}</dd>
-    <dt>Credits debited</dt><dd>{{ "%g"|format(treq.TokensDebited|float) }}</dd>
+    {% if not is_postpaid %}<dt>Credits debited</dt><dd>{{ "%g"|format(treq.TokensDebited|float) }}</dd>{% endif %}
   </dl>
 </div>
 

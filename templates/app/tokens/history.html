@@ -1,18 +1,27 @@
 {% extends "base_app.html" %}
-{% block title %}Credit History — RadioMonitor{% endblock %}
-{% block topbar_title %}Credit History{% endblock %}
+{% block title %}{% if is_postpaid %}Usage History{% else %}Credit History{% endif %} — RadioMonitor{% endblock %}
+{% block topbar_title %}{% if is_postpaid %}Usage History{% else %}Credit History{% endif %}{% endblock %}
 {% block content %}
     <div class="page-eyebrow">Account</div>
 <header class="page-header">
-        <h1>Token transaction history</h1>
-        <a href="/account/tokens" class="nav-link">← Back to balance</a>
+        <h1>{% if is_postpaid %}Usage history{% else %}Token transaction history{% endif %}</h1>
+        <a href="/account/tokens" class="nav-link">← Back to {% if is_postpaid %}usage{% else %}balance{% endif %}</a>
     </header>
 
     <p class="muted small">{{ total }} transaction{{ "" if total == 1 else "s" }}{% if total_pages > 1 %} — page {{ page }} of {{ total_pages }}{% endif %}.</p>
 
     {% if txs %}
     <table class="data-table">
-        <thead><tr><th>Date</th><th>Type</th><th>Credits</th><th>Value</th><th>Balance after</th><th>Source</th><th>Description</th><th>Ref</th></tr></thead>
+        <thead><tr>
+            <th>Date</th>
+            <th>Type</th>
+            {% if not is_postpaid %}<th>Credits</th>{% endif %}
+            <th>Value</th>
+            {% if not is_postpaid %}<th>Balance after</th>{% endif %}
+            <th>Source</th>
+            <th>Description</th>
+            <th>Ref</th>
+        </tr></thead>
         <tbody>
         {% for tx in txs %}
         {% set abs_tokens = tx.TokenAmount|float|abs %}
@@ -21,11 +30,15 @@
         <tr>
             <td class="muted">{{ tx.CreatedAt.strftime("%Y-%m-%d %H:%M") }}</td>
             <td><span class="badge badge-{{ 'active' if tx.Type in ('purchase','credit') else 'pending' if tx.Type == 'adjustment' else 'withdrawn' }}">{{ tx.Type }}</span></td>
+            {% if not is_postpaid %}
             <td style="color:{{ '#00c853' if tx.TokenAmount > 0 else '#ff1744' }};font-weight:600">
                 {{ "%+.2f"|format(tx.TokenAmount|float) }}
             </td>
+            {% endif %}
             <td class="muted" data-zar="{{ zar_val }}" data-usd="{{ usd_val }}">{{ zar_val if currency == 'ZAR' else usd_val }}</td>
+            {% if not is_postpaid %}
             <td class="muted">{{ "%g"|format(tx.BalanceAfter|float) }}</td>
+            {% endif %}
             <td><span class="badge badge-{{ 'pending' if tx.Source == 'api' else 'active' }}">{{ tx.Source }}</span></td>
             <td class="muted">{{ tx.Description or "—" }}</td>
             <td class="muted small">{{ tx.ReferenceType ~ " #" ~ tx.ReferenceID if tx.ReferenceID else "—" }}</td>
