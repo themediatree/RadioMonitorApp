@@ -14,6 +14,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         response = await call_next(request)
 
+        # Disable legacy XSS auditor (deprecated; setting to 0 is the safe choice)
+        response.headers["X-XSS-Protection"] = "0"
+
         # Prevent clickjacking
         response.headers["X-Frame-Options"] = "DENY"
 
@@ -25,7 +28,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         # Force HTTPS for 1 year (only effective over HTTPS)
         response.headers["Strict-Transport-Security"] = (
-            "max-age=31536000; includeSubDomains"
+            "max-age=31536000; includeSubDomains; preload"
         )
 
         # Restrict browser feature access
