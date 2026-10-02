@@ -115,7 +115,8 @@
             </label>
         </fieldset>
 
-	<div class="card" id="cost-preview" style="background:rgba(26,79,168,0.08);border:1px solid rgba(26,79,168,0.2);margin-bottom:var(--space-3);display:none">
+	{% if user.user_type.value != "subscriber_user" %}
+        <div class="card" id="cost-preview" style="background:rgba(26,79,168,0.08);border:1px solid rgba(26,79,168,0.2);margin-bottom:var(--space-3);display:none">
             <p class="muted small" style="margin:0">
                 <strong>Estimated cost:</strong>
                 {% if not is_postpaid %}<span id="cost-value">—</span> credits &nbsp;·&nbsp;{% else %}<span id="cost-value" style="display:none">—</span>{% endif %}
@@ -128,6 +129,7 @@
             </p>
             {% endif %}
         </div>
+        {% endif %}
         
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Register commercial</button>

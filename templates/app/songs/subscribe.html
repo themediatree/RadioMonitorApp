@@ -53,6 +53,7 @@
     </div>
 
 
+    {% if user.user_type.value != "subscriber_user" %}
     <div class="card cost-preview" id="cost-preview" style="display:none">
         <p class="small" style="margin:0">
             <strong>Estimated cost:</strong>
@@ -65,7 +66,8 @@
             Your balance: <strong>{{ "%g"|format(token_balance) }}</strong> credits
         </p>
         {% endif %}
-    </div>	
+    </div>
+    {% endif %}	
 
     <div class="form-actions">
         <button type="submit" class="btn btn-primary">Subscribe</button>
