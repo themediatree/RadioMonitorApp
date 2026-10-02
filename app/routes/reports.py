@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.deps import get_current_user, right_panel_context
+from app.deps import get_current_user, require_admin_within_tenant, right_panel_context
 from app.models.user import User
 from app.services.report_service import (
     get_detection_report,
@@ -618,7 +618,7 @@ def keyword_report_pdf(
 @router.get("/reports/invoice", response_class=HTMLResponse)
 def invoice_report(
     request: Request,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_admin_within_tenant)],
     db: Annotated[Session, Depends(get_db)],
     date_from: Optional[str] = Query(default=None),
     date_to: Optional[str] = Query(default=None),
@@ -666,7 +666,7 @@ def invoice_report(
 @router.get("/reports/invoice/pdf")
 def invoice_report_pdf(
     request: Request,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_admin_within_tenant)],
     db: Annotated[Session, Depends(get_db)],
     date_from: Optional[str] = Query(default=None),
     date_to: Optional[str] = Query(default=None),

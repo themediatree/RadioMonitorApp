@@ -749,9 +749,11 @@ select option {
           Account
         </a>
         <div class="nav-sub">
-          <a href="/account/tokens" class="nav-item {% if request.url.path == '/account/tokens' %}active{% endif %}">Credit balance</a>
-          <a href="/account/tokens/history" class="nav-item {% if 'history' in request.url.path %}active{% endif %}">Transaction history</a>
-          <a href="/account/credits/purchase" class="nav-item {% if 'purchase' in request.url.path %}active{% endif %}">Purchase credits</a>
+          {% if user.user_type.value != "subscriber_user" %}
+          <a href="/account/tokens" class="nav-item {% if request.url.path == '/account/tokens' %}active{% endif %}">{% if is_postpaid %}Usage summary{% else %}Credit balance{% endif %}</a>
+          <a href="/account/tokens/history" class="nav-item {% if 'history' in request.url.path %}active{% endif %}">{% if is_postpaid %}Usage history{% else %}Transaction history{% endif %}</a>
+          {% if not is_postpaid %}<a href="/account/credits/purchase" class="nav-item {% if 'purchase' in request.url.path %}active{% endif %}">Purchase credits</a>{% endif %}
+          {% endif %}
           {% if user.user_type.value == "subscriber_admin" %}
           <a href="/account/team" class="nav-item {% if '/account/team' in request.url.path %}active{% endif %}">Team</a>
           <a href="/account/api" class="nav-item {% if '/account/api' in request.url.path %}active{% endif %}">API access</a>
@@ -855,7 +857,7 @@ select option {
 
   <!-- RIGHT PANEL -->
   <aside class="right-panel">
-    {% if user.user_type.value != "internal" and user.SubscriberID %}
+    {% if user.user_type.value not in ("internal", "subscriber_user") and user.SubscriberID %}
     <div class="rp-section">
       {% if not is_postpaid %}
       <div class="rp-label">Credit balance</div>

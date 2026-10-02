@@ -16,7 +16,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.deps import get_current_user, right_panel_context, require_internal
+from app.deps import get_current_user, require_admin_within_tenant, right_panel_context, require_internal
 from app.models.billing import SubscriberTokenAccount
 from app.models.subscriber import Subscriber
 from app.models.user import User, UserType
@@ -42,7 +42,7 @@ def _ip(request: Request) -> Optional[str]:
 @router.get("/account/tokens", response_class=HTMLResponse)
 def token_balance(
     request: Request,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_admin_within_tenant)],
     db: Annotated[Session, Depends(get_db)],
 ):
     if user.user_type == UserType.INTERNAL:
@@ -97,7 +97,7 @@ def token_balance(
 @router.get("/account/tokens/history", response_class=HTMLResponse)
 def token_history(
     request: Request,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_admin_within_tenant)],
     db: Annotated[Session, Depends(get_db)],
     page: int = 1,
 ):
@@ -212,7 +212,7 @@ def admin_credit_tokens(
 @router.get("/account/credits/purchase", response_class=HTMLResponse)
 def purchase_credits(
     request: Request,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_admin_within_tenant)],
     db: Annotated[Session, Depends(get_db)],
 ):
     from app.deps import right_panel_context
