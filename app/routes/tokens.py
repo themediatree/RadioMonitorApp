@@ -87,6 +87,8 @@ def token_balance(
             "consumed_usd": format_usd(tokens_to_usd(Decimal(str(account.TotalConsumed or 0)), rate, fx)),
             "currency": currency,
             "is_postpaid": is_postpaid,
+            "zar_per_token": float(rate),
+            "fx_rate": float(fx),
             **right_panel_context(user, db, request),
         },
     )

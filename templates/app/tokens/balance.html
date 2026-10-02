@@ -55,21 +55,33 @@
         <thead><tr>
             <th>Date</th>
             <th>Type</th>
-            {% if not is_postpaid %}<th>Amount</th><th>Balance after</th>{% endif %}
+            {% if not is_postpaid %}<th>Credits</th>{% endif %}
+            <th>Value</th>
+            {% if not is_postpaid %}<th>Balance after</th>{% endif %}
+            <th>Source</th>
             <th>Description</th>
+            <th>Ref</th>
         </tr></thead>
         <tbody>
         {% for tx in recent_txs %}
+        {% set abs_tokens = tx.TokenAmount|float|abs %}
+        {% set zar_val = "R %.2f"|format(abs_tokens * zar_per_token) %}
+        {% set usd_val = "$ %.2f"|format(abs_tokens * zar_per_token / fx_rate) %}
         <tr>
             <td class="muted">{{ tx.CreatedAt.strftime("%Y-%m-%d %H:%M") }}</td>
             <td><span class="badge badge-{{ 'active' if tx.Type in ('purchase','credit') else 'pending' if tx.Type == 'adjustment' else 'withdrawn' }}">{{ tx.Type }}</span></td>
             {% if not is_postpaid %}
-            <td style="color:{{ '#00c853' if tx.TokenAmount > 0 else '#ff1744' }}">
-                {{ "%g"|format(tx.TokenAmount|float) }}
+            <td style="color:{{ '#00c853' if tx.TokenAmount > 0 else '#ff1744' }};font-weight:600">
+                {{ "%+.2f"|format(tx.TokenAmount|float) }}
             </td>
+            {% endif %}
+            <td class="muted" data-zar="{{ zar_val }}" data-usd="{{ usd_val }}">{{ zar_val if currency == 'ZAR' else usd_val }}</td>
+            {% if not is_postpaid %}
             <td class="muted">{{ "%g"|format(tx.BalanceAfter|float) }}</td>
             {% endif %}
+            <td><span class="badge badge-{{ 'pending' if tx.Source == 'api' else 'active' }}">{{ tx.Source }}</span></td>
             <td class="muted">{{ tx.Description or "—" }}</td>
+            <td class="muted small">{{ tx.ReferenceType ~ " #" ~ tx.ReferenceID if tx.ReferenceID else "—" }}</td>
         </tr>
         {% endfor %}
         </tbody>
