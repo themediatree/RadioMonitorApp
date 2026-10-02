@@ -9,7 +9,7 @@
   size: A4 landscape;
   margin: 14mm 14mm 18mm 14mm;
   @bottom-center {
-    content: "NOCTIV RadioMonitor · Invoice Report · Page " counter(page) " of " counter(pages);
+    content: "NOCTIV RadioMonitor · {% if is_postpaid_subscriber %}Statement of Account{% else %}Invoice Report{% endif %} · Page " counter(page) " of " counter(pages);
     font-family: 'JetBrains Mono', monospace; font-size: 7pt; color: #94a3b8;
   }
 }
@@ -38,16 +38,21 @@ body { font-family: 'DM Sans', sans-serif; font-size: 9pt; color: #1e293b; backg
 .balance-item { text-align: right; }
 .balance-label { font-family: 'JetBrains Mono', monospace; font-size: 6.5pt; color: #94a3b8; letter-spacing: 0.08em; text-transform: uppercase; }
 .balance-value { font-family: 'JetBrains Mono', monospace; font-size: 12pt; font-weight: 500; color: #0a1628; }
+.balance-value.due { color: #dc2626; }
 .balance-zar   { font-size: 7pt; color: #64748b; }
 
 /* STAT STRIP */
-.pdf-stat-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+.pdf-stat-strip { display: grid; gap: 8px; margin-bottom: 10px; }
+.pdf-stat-strip.four-col { grid-template-columns: repeat(4, 1fr); }
+.pdf-stat-strip.three-col { grid-template-columns: repeat(3, 1fr); }
 .pdf-stat { background: #f8fafc; border: 1px solid #e2e8f0; border-top: 3px solid #16a34a; border-radius: 6px; padding: 8px 10px; }
-.pdf-stat:nth-child(2) { border-top-color: #ef4444; }
-.pdf-stat:nth-child(3) { border-top-color: #2d6be4; }
-.pdf-stat:nth-child(4) { border-top-color: #7c4dff; }
+.pdf-stat:nth-child(1).red-top    { border-top-color: #ef4444; }
+.pdf-stat.stat-red    { border-top-color: #ef4444; }
+.pdf-stat.stat-blue   { border-top-color: #2d6be4; }
+.pdf-stat.stat-purple { border-top-color: #7c4dff; }
 .pdf-stat-label { font-family: 'JetBrains Mono', monospace; font-size: 6.5pt; color: #94a3b8; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 3px; }
 .pdf-stat-value { font-family: 'JetBrains Mono', monospace; font-size: 14pt; font-weight: 500; color: #0a1628; line-height: 1; }
+.pdf-stat-value.smaller { font-size: 11pt; }
 .pdf-stat-sub { font-size: 7pt; color: #94a3b8; margin-top: 2px; }
 
 /* TABLE */
@@ -82,7 +87,9 @@ tbody td.right { text-align: right; }
 }
 
 /* BREAKDOWN */
-.breakdown-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.breakdown-grid { display: grid; gap: 10px; }
+.breakdown-grid.two-col  { grid-template-columns: 1fr 1fr; }
+.breakdown-grid.one-col  { grid-template-columns: 1fr; }
 .breakdown-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; }
 .breakdown-title { font-family: 'JetBrains Mono', monospace; font-size: 6.5pt; color: #64748b; letter-spacing: 0.1em; text-transform: uppercase; padding: 6px 10px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; }
 .breakdown-row { display: flex; align-items: center; padding: 4px 10px; border-bottom: 1px solid #f1f5f9; gap: 8px; }
@@ -90,7 +97,7 @@ tbody td.right { text-align: right; }
 .b-name  { flex: 1; font-size: 7.5pt; color: #1e293b; }
 .b-bar   { width: 60px; height: 5px; background: #e2e8f0; border-radius: 2px; overflow: hidden; }
 .b-fill  { height: 100%; border-radius: 2px; background: linear-gradient(90deg, #16a34a, #4ade80); }
-.b-count { font-family: 'JetBrains Mono', monospace; font-size: 7pt; color: #475569; width: 55px; text-align: right; }
+.b-count { font-family: 'JetBrains Mono', monospace; font-size: 7pt; color: #475569; width: 70px; text-align: right; }
 
 .pdf-footer-note { margin-top: 10px; padding-top: 8px; border-top: 1px solid #e2e8f0; font-size: 7pt; color: #94a3b8; font-family: 'JetBrains Mono', monospace; }
 </style>
@@ -101,7 +108,13 @@ tbody td.right { text-align: right; }
 <div class="pdf-header">
   <div>
     <div class="pdf-brand">NOC<span>TIV</span></div>
-    <div class="pdf-report-title">Invoice Report · Credit & Usage Statement</div>
+    <div class="pdf-report-title">
+      {% if is_postpaid_subscriber %}
+      Statement of Account · Service Usage &amp; Charges
+      {% else %}
+      Invoice Report · Credit &amp; Usage Statement
+      {% endif %}
+    </div>
   </div>
   <div class="pdf-meta">
     <div><strong>Account</strong> {{ result.subscriber_name }}</div>
@@ -110,7 +123,7 @@ tbody td.right { text-align: right; }
       {% if result.date_to %} – {{ result.date_to.strftime("%d %b %Y") }}{% endif %}
     </div>
     <div><strong>Generated</strong> {{ result.generated_at.strftime("%d %b %Y %H:%M") }} UTC</div>
-    <div><strong>Rate</strong> R {{ "%.2f"|format(result.zar_per_token) }} per credit</div>
+    <div><strong>Rate</strong> R {{ "%.2f"|format(result.zar_per_token) }} per {% if is_postpaid_subscriber %}unit{% else %}credit{% endif %}</div>
   </div>
 </div>
 
@@ -118,9 +131,16 @@ tbody td.right { text-align: right; }
 <div class="account-banner">
   <div>
     <div class="account-name">{{ result.subscriber_name }}</div>
-    <div class="account-sub">NOCTIV RadioMonitor · Credit Statement</div>
+    <div class="account-sub">NOCTIV RadioMonitor · {% if is_postpaid_subscriber %}Statement of Account{% else %}Credit Statement{% endif %}</div>
   </div>
   <div class="balance-group">
+    {% if is_postpaid_subscriber %}
+    <div class="balance-item">
+      <div class="balance-label">Amount Due</div>
+      <div class="balance-value due">R {{ "%.2f"|format(result.total_zar) }}</div>
+      <div class="balance-zar">for selected period</div>
+    </div>
+    {% else %}
     <div class="balance-item">
       <div class="balance-label">Opening Balance</div>
       <div class="balance-value">{{ "%.2f"|format(result.opening_balance) }} cr</div>
@@ -131,32 +151,53 @@ tbody td.right { text-align: right; }
       <div class="balance-value">{{ "%.2f"|format(result.closing_balance) }} cr</div>
       <div class="balance-zar">R {{ "%.2f"|format(result.closing_balance * result.zar_per_token) }}</div>
     </div>
+    {% endif %}
   </div>
 </div>
 
 <!-- STAT STRIP -->
-<div class="pdf-stat-strip">
+{% if is_postpaid_subscriber %}
+<div class="pdf-stat-strip three-col">
+  <div class="pdf-stat stat-red">
+    <div class="pdf-stat-label">Total Charges (ZAR)</div>
+    <div class="pdf-stat-value smaller">R {{ "%.2f"|format(result.total_zar) }}</div>
+    <div class="pdf-stat-sub">for selected period</div>
+  </div>
+  <div class="pdf-stat stat-blue">
+    <div class="pdf-stat-label">Transactions</div>
+    <div class="pdf-stat-value">{{ result.total }}</div>
+    <div class="pdf-stat-sub">in period</div>
+  </div>
+  <div class="pdf-stat stat-purple">
+    <div class="pdf-stat-label">Rate</div>
+    <div class="pdf-stat-value smaller">R {{ "%.2f"|format(result.zar_per_token) }}</div>
+    <div class="pdf-stat-sub">per unit (ZAR)</div>
+  </div>
+</div>
+{% else %}
+<div class="pdf-stat-strip four-col">
   <div class="pdf-stat">
     <div class="pdf-stat-label">Credits Top-up</div>
     <div class="pdf-stat-value">{{ "%.2f"|format(result.total_credited) }}</div>
     <div class="pdf-stat-sub">R {{ "%.2f"|format(result.total_credited * result.zar_per_token) }}</div>
   </div>
-  <div class="pdf-stat">
+  <div class="pdf-stat stat-red">
     <div class="pdf-stat-label">Credits Used</div>
     <div class="pdf-stat-value">{{ "%.2f"|format(result.total_debited) }}</div>
     <div class="pdf-stat-sub">R {{ "%.2f"|format(result.total_zar) }}</div>
   </div>
-  <div class="pdf-stat">
+  <div class="pdf-stat stat-blue">
     <div class="pdf-stat-label">Transactions</div>
     <div class="pdf-stat-value">{{ result.total }}</div>
     <div class="pdf-stat-sub">in period</div>
   </div>
-  <div class="pdf-stat">
+  <div class="pdf-stat stat-purple">
     <div class="pdf-stat-label">Net Movement</div>
     <div class="pdf-stat-value">{{ "%.2f"|format(result.closing_balance - result.opening_balance) }}</div>
     <div class="pdf-stat-sub">credits (period)</div>
   </div>
 </div>
+{% endif %}
 
 <!-- TRANSACTION TABLE -->
 <table>
@@ -166,9 +207,9 @@ tbody td.right { text-align: right; }
       <th>Description</th>
       <th>Category</th>
       <th>Type</th>
-      <th class="right">Credits</th>
+      {% if not is_postpaid_subscriber %}<th class="right">Credits</th>{% endif %}
       <th class="right">ZAR (R)</th>
-      <th class="right">Balance</th>
+      {% if not is_postpaid_subscriber %}<th class="right">Balance</th>{% endif %}
     </tr>
   </thead>
   <tbody>
@@ -182,6 +223,7 @@ tbody td.right { text-align: right; }
           {{ row.type_label }}
         </span>
       </td>
+      {% if not is_postpaid_subscriber %}
       <td class="right">
         {% if row.is_debit %}
         <span class="debit">−{{ "%.2f"|format(row.credits) }}</span>
@@ -189,6 +231,7 @@ tbody td.right { text-align: right; }
         <span class="credit">+{{ "%.2f"|format(row.credits) }}</span>
         {% endif %}
       </td>
+      {% endif %}
       <td class="right">
         {% if row.is_debit %}
         <span class="debit">R {{ "%.2f"|format(row.zar_amount) }}</span>
@@ -196,7 +239,9 @@ tbody td.right { text-align: right; }
         <span class="muted">—</span>
         {% endif %}
       </td>
+      {% if not is_postpaid_subscriber %}
       <td class="right"><span class="neutral">{{ "%.2f"|format(row.balance_after) }}</span></td>
+      {% endif %}
     </tr>
     {% endfor %}
   </tbody>
@@ -204,7 +249,22 @@ tbody td.right { text-align: right; }
 
 <!-- BREAKDOWN -->
 {% if result.by_category %}
-<div class="breakdown-grid">
+{% if is_postpaid_subscriber %}
+<div class="breakdown-grid one-col">
+  <div class="breakdown-section">
+    <div class="breakdown-title">ZAR Charges by Category</div>
+    {% set max_z = result.by_category_zar.values() | list | max %}
+    {% for name, zar_amount in result.by_category_zar.items() %}
+    <div class="breakdown-row">
+      <div class="b-name">{{ name }}</div>
+      <div class="b-bar"><div class="b-fill" style="width:{{ ((zar_amount / max_z) * 100)|int }}%"></div></div>
+      <div class="b-count">R {{ "%.2f"|format(zar_amount) }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+<div class="breakdown-grid two-col">
   <div class="breakdown-section">
     <div class="breakdown-title">Credits Used by Category</div>
     {% set max_c = result.by_category.values() | list | max %}
@@ -229,10 +289,15 @@ tbody td.right { text-align: right; }
   </div>
 </div>
 {% endif %}
+{% endif %}
 
 <div class="pdf-footer-note">
   Confidential · Generated by NOCTIV RadioMonitor · {{ result.generated_at.strftime("%d %b %Y %H:%M") }} UTC ·
+  {% if is_postpaid_subscriber %}
+  This statement reflects service usage charges for the selected period. Invoiced separately. This document is for account reference only.
+  {% else %}
   Credits are non-refundable unless otherwise agreed. This statement is for account reference only and does not constitute a VAT invoice.
+  {% endif %}
 </div>
 </body>
 </html>

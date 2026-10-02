@@ -131,8 +131,14 @@
 
   <a href="/reports/invoice" class="report-card">
     <div class="report-card-icon">🧾</div>
-    <div class="report-card-title">Invoice Report</div>
-    <div class="report-card-desc">NOCTIV usage invoice for your account — credits consumed, ZAR values, and transaction history for a billing period.</div>
+    <div class="report-card-title">{% if is_postpaid %}Statement of Account{% else %}Invoice Report{% endif %}</div>
+    <div class="report-card-desc">
+      {% if is_postpaid %}
+      Service usage charges for your account — ZAR totals by category and transaction history for a billing period.
+      {% else %}
+      NOCTIV usage invoice for your account — credits consumed, ZAR values, and transaction history for a billing period.
+      {% endif %}
+    </div>
     <div class="report-card-tag">→ Run report</div>
   </a>
 

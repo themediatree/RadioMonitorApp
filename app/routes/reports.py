@@ -645,6 +645,7 @@ def invoice_report(
         except (ValueError, Exception):
             pass
 
+    from app.services.token_service import is_postpaid as _is_postpaid
     return templates.TemplateResponse(
         request=request,
         name="app/reports/invoice_report.html",
@@ -652,6 +653,7 @@ def invoice_report(
             "user": user,
             "filters": filters,
             "result": result,
+            "is_postpaid_subscriber": _is_postpaid(db, user.SubscriberID) if user.SubscriberID else False,
             **right_panel_context(user, db, request),
         },
     )
@@ -680,9 +682,11 @@ def invoice_report_pdf(
         date_to=dt,
     )
 
+    from app.services.token_service import is_postpaid as _is_postpaid
+    _postpaid_pdf = _is_postpaid(db, user.SubscriberID) if user.SubscriberID else False
     html_content = templates.get_template(
         "app/reports/invoice_report_pdf.html"
-    ).render(result=result)
+    ).render(result=result, is_postpaid_subscriber=_postpaid_pdf)
 
     from playwright.sync_api import sync_playwright
     filename = f"invoice_{df or 'all'}_{dt or 'all'}.pdf"

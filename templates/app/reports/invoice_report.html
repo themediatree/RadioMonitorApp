@@ -1,6 +1,6 @@
 {% extends "base_app.html" %}
-{% block title %}Invoice Report — NOCTIV{% endblock %}
-{% block topbar_title %}Invoice Report{% endblock %}
+{% block title %}{% if is_postpaid_subscriber %}Statement of Account{% else %}Invoice Report{% endif %} — NOCTIV{% endblock %}
+{% block topbar_title %}{% if is_postpaid_subscriber %}Statement of Account{% else %}Invoice Report{% endif %}{% endblock %}
 
 {% block content %}
 <style>
@@ -73,6 +73,7 @@
   display: grid; grid-template-columns: repeat(4, 1fr);
   gap: 1rem; margin-bottom: 1.75rem;
 }
+.stat-strip.three-col { grid-template-columns: repeat(3, 1fr); }
 .stat-strip-card {
   background: var(--card); border: 1px solid var(--border);
   border-radius: 10px; padding: 1rem 1.25rem;
@@ -131,6 +132,7 @@
   display: grid; grid-template-columns: 1fr 1fr;
   gap: 1rem; margin-top: 1.75rem;
 }
+.breakdown-grid.single-col { grid-template-columns: 1fr; }
 .breakdown-card {
   background: var(--card); border: 1px solid var(--border);
   border-radius: 12px; overflow: hidden;
@@ -147,22 +149,26 @@
 }
 .breakdown-row:last-child { border-bottom: none; }
 .breakdown-name { font-size: 0.82rem; color: var(--pale); flex: 1; }
-.breakdown-bar-wrap { display: flex; align-items: center; gap: 0.6rem; width: 140px; flex-shrink: 0; }
+.breakdown-bar-wrap { display: flex; align-items: center; gap: 0.6rem; width: 160px; flex-shrink: 0; }
 .breakdown-bar { height: 6px; border-radius: 3px; background: rgba(34,197,94,0.12); flex: 1; overflow: hidden; }
 .breakdown-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #16a34a, #4ade80); }
-.breakdown-count { font-family: var(--mono); font-size: 0.72rem; color: var(--chrome); width: 50px; text-align: right; flex-shrink: 0; }
+.breakdown-count { font-family: var(--mono); font-size: 0.72rem; color: var(--chrome); width: 70px; text-align: right; flex-shrink: 0; }
 
 .empty-state { text-align: center; padding: 4rem 2rem; color: var(--muted); }
 .empty-state-icon { font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.4; }
 .empty-state-title { font-family: var(--display); font-size: 1rem; color: var(--chrome); margin-bottom: 0.4rem; }
 </style>
 
-<div class="report-eyebrow">Reports / Billing & Usage</div>
+<div class="report-eyebrow">Reports / {% if is_postpaid_subscriber %}Billing{% else %}Billing & Usage{% endif %}</div>
 <div class="report-hero">
   <div>
-    <h1>Invoice Report</h1>
+    <h1>{% if is_postpaid_subscriber %}Statement of Account{% else %}Invoice Report{% endif %}</h1>
     <div class="report-hero-meta">
+      {% if is_postpaid_subscriber %}
+      Service usage and ZAR charges for your account
+      {% else %}
       Credit usage and transaction history for your account
+      {% endif %}
       {% if result %}· Generated {{ result.generated_at.strftime("%d %b %Y %H:%M") }} UTC{% endif %}
     </div>
   </div>
@@ -218,11 +224,16 @@
   <div>
     <div class="account-banner-name">{{ result.subscriber_name }}</div>
     <div class="account-banner-sub">
+      {% if is_postpaid_subscriber %}
+      Rate: R {{ "%.2f"|format(result.zar_per_token) }} per unit ·
+      {% else %}
       Rate: {{ result.zar_per_token }} ZAR per credit ·
+      {% endif %}
       Period: {{ result.date_from.strftime("%d %b %Y") if result.date_from else "All time" }}
       {% if result.date_to %} – {{ result.date_to.strftime("%d %b %Y") }}{% endif %}
     </div>
   </div>
+  {% if not is_postpaid_subscriber %}
   <div class="account-balance-group">
     <div class="account-balance-item">
       <div class="account-balance-label">Opening Balance</div>
@@ -235,9 +246,39 @@
       <div class="account-balance-zar">R {{ "%.2f"|format(result.closing_balance * result.zar_per_token) }}</div>
     </div>
   </div>
+  {% else %}
+  <div class="account-balance-group">
+    <div class="account-balance-item">
+      <div class="account-balance-label">Amount Due</div>
+      <div class="account-balance-value" style="color:#f87171">R {{ "%.2f"|format(result.total_zar) }}</div>
+      <div class="account-balance-zar">for selected period</div>
+    </div>
+  </div>
+  {% endif %}
 </div>
 
 <!-- SUMMARY STRIP -->
+{% if is_postpaid_subscriber %}
+<div class="stat-strip three-col">
+  <div class="stat-strip-card accent-red">
+    <div class="stat-strip-label">Total Charges (ZAR)</div>
+    <div class="stat-strip-value" style="font-size:1.4rem">R {{ "%.2f"|format(result.total_zar) }}</div>
+    <div class="stat-strip-sub">for selected period</div>
+  </div>
+  <div class="stat-strip-card accent-blue">
+    <div class="stat-strip-label">Transactions</div>
+    <div class="stat-strip-value">{{ result.total }}</div>
+    <div class="stat-strip-sub">in selected period</div>
+  </div>
+  <div class="stat-strip-card accent-purple">
+    <div class="stat-strip-label">Rate</div>
+    <div class="stat-strip-value" style="font-size:1.1rem;padding-top:0.3rem">
+      R {{ "%.2f"|format(result.zar_per_token) }}
+    </div>
+    <div class="stat-strip-sub">per unit (ZAR)</div>
+  </div>
+</div>
+{% else %}
 <div class="stat-strip">
   <div class="stat-strip-card">
     <div class="stat-strip-label">Credits Top-up</div>
@@ -262,13 +303,14 @@
     <div class="stat-strip-sub">per credit (ZAR)</div>
   </div>
 </div>
+{% endif %}
 
 {% if result.rows %}
 
 <!-- TRANSACTION TABLE -->
 <div class="results-panel">
   <div class="results-header">
-    <div class="results-header-title">Transaction Log</div>
+    <div class="results-header-title">{% if is_postpaid_subscriber %}Usage Log{% else %}Transaction Log{% endif %}</div>
     <div class="results-count">{{ result.total }} transaction{{ 's' if result.total != 1 else '' }}</div>
   </div>
   <div class="table-scroll">
@@ -279,9 +321,13 @@
           <th>Description</th>
           <th>Category</th>
           <th>Type</th>
+          {% if not is_postpaid_subscriber %}
           <th style="text-align:right">Credits</th>
+          {% endif %}
           <th style="text-align:right">ZAR (R)</th>
+          {% if not is_postpaid_subscriber %}
           <th style="text-align:right">Balance</th>
+          {% endif %}
         </tr>
       </thead>
       <tbody>
@@ -301,6 +347,7 @@
               {{ row.type_label }}
             </span>
           </td>
+          {% if not is_postpaid_subscriber %}
           <td style="text-align:right">
             {% if row.is_debit %}
             <span class="credit-debit">−{{ "%.2f"|format(row.credits) }}</span>
@@ -308,6 +355,7 @@
             <span class="credit-topup">+{{ "%.2f"|format(row.credits) }}</span>
             {% endif %}
           </td>
+          {% endif %}
           <td style="text-align:right">
             {% if row.is_debit %}
             <span class="credit-debit" style="font-size:0.75rem">R {{ "%.2f"|format(row.zar_amount) }}</span>
@@ -315,9 +363,11 @@
             <span class="credit-neutral" style="font-size:0.75rem">—</span>
             {% endif %}
           </td>
+          {% if not is_postpaid_subscriber %}
           <td style="text-align:right">
             <span class="credit-neutral">{{ "%.2f"|format(row.balance_after) }}</span>
           </td>
+          {% endif %}
         </tr>
         {% endfor %}
       </tbody>
@@ -327,6 +377,25 @@
 
 <!-- BREAKDOWN -->
 {% if result.by_category %}
+{% if is_postpaid_subscriber %}
+<div class="breakdown-grid single-col" style="margin-top:1.75rem">
+  <div class="breakdown-card">
+    <div class="breakdown-header">ZAR Charges by Category</div>
+    {% set max_z = result.by_category_zar.values() | list | max %}
+    {% for name, zar_amount in result.by_category_zar.items() %}
+    <div class="breakdown-row">
+      <div class="breakdown-name">{{ name }}</div>
+      <div class="breakdown-bar-wrap">
+        <div class="breakdown-bar">
+          <div class="breakdown-bar-fill" style="width:{{ ((zar_amount / max_z) * 100)|int }}%"></div>
+        </div>
+        <div class="breakdown-count">R {{ "%.2f"|format(zar_amount) }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
 <div class="breakdown-grid">
   <div class="breakdown-card">
     <div class="breakdown-header">Credits Used by Category</div>
@@ -359,6 +428,7 @@
     {% endfor %}
   </div>
 </div>
+{% endif %}
 {% endif %}
 
 {% else %}

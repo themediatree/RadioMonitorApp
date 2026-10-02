@@ -886,6 +886,15 @@ class InvoiceReportResult:
                 counts[r.reference_type] = counts.get(r.reference_type, Decimal("0")) + r.credits
         return dict(sorted(counts.items(), key=lambda x: -x[1]))
 
+    @property
+    def by_category_zar(self) -> dict[str, Decimal]:
+        """ZAR spend by category (debits only)."""
+        counts: dict[str, Decimal] = {}
+        for r in self.rows:
+            if r.is_debit:
+                counts[r.reference_type] = counts.get(r.reference_type, Decimal("0")) + r.zar_amount
+        return dict(sorted(counts.items(), key=lambda x: -x[1]))
+
 
 _TYPE_LABELS = {
     "debit":      "Usage",
